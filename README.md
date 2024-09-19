@@ -1,2 +1,2 @@
-# Frontend-Shotra
-Collaboration and Recomendation Network
+# cascaron-frontend
+Plantilla Dashboard para proyectos Angular
