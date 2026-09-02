@@ -1,9 +1,26 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import { router } from 'expo-router';
 
 const TOKEN_KEY = 'shotra_auth_token';
 const AUTHORIZA_URL = process.env.EXPO_PUBLIC_AUTHORIZA_URL || 'http://localhost:3000/api';
+
+// SecureStore no funciona en web — usamos localStorage como fallback
+const storage = {
+  async getItem(key: string): Promise<string | null> {
+    if (Platform.OS === 'web') return localStorage.getItem(key);
+    return SecureStore.getItemAsync(key);
+  },
+  async setItem(key: string, value: string): Promise<void> {
+    if (Platform.OS === 'web') { localStorage.setItem(key, value); return; }
+    await SecureStore.setItemAsync(key, value);
+  },
+  async removeItem(key: string): Promise<void> {
+    if (Platform.OS === 'web') { localStorage.removeItem(key); return; }
+    await SecureStore.deleteItemAsync(key);
+  },
+};
 
 interface AuthContextValue {
   isAuthenticated: boolean;
@@ -25,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function checkAuth() {
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
+      const token = await storage.getItem(TOKEN_KEY);
       if (token) {
         // TODO: validar token con el backend (GET /profiles/me)
         setUser({ token });
@@ -38,15 +55,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function login(email: string, password: string) {
-    // Autenticar contra Authoriza (ecosistema CycloNet)
     const res = await fetch(`${AUTHORIZA_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ strUserName: email, strPassword: password }),
+      body: JSON.stringify({ email, password, applicationName: 'Shotra' }),
     });
 
     if (!res.ok) {
       const error = await res.json().catch(() => ({}));
+      if (res.status === 401 && error.message === 'UNAUTHORIZED') {
+        throw new Error('No tienes un plan de SHOTRA activo. Registrate para obtener acceso.');
+      }
       throw new Error(error.message || 'Credenciales incorrectas');
     }
 
@@ -55,12 +74,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!token) throw new Error('No se recibio token de autenticacion');
 
-    await SecureStore.setItemAsync(TOKEN_KEY, token);
-    setUser({ token, ...data.user });
+    // Obtener/crear perfil en Shotra
+    const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4100/api';
+    const profileRes = await fetch(`${API_URL}/profiles/me`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+
+    await storage.setItem(TOKEN_KEY, token);
+    const profileData = profileRes.ok ? await profileRes.json() : null;
+    setUser({ token, profile: profileData, ...data.user });
   }
 
   async function logout() {
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
+    await storage.removeItem(TOKEN_KEY);
     setUser(null);
     router.replace('/(auth)/login');
   }
