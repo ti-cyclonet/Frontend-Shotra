@@ -28,9 +28,10 @@
       },
       "package": "com.cyclonet.shotra",
       "permissions": [
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "CAMERA"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -44,6 +45,21 @@
       "expo-notifications",
       "expo-secure-store",
       "expo-image-picker"
-    ]
+    ],
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "4007e7fb-6707-4b22-96ff-9ac0aadb4dab"
+      }
+    },
+    "owner": "cyclonet-s-a-s"
   }
 }
