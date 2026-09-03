@@ -84,8 +84,13 @@ export default function LoginScreen() {
   const formTranslate = formAnim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] });
   const themeTranslate = themeAnim.interpolate({ inputRange: [0, 1], outputRange: [30, 0] });
   const shakeX = shake.interpolate({ inputRange: [-1, 1], outputRange: [-8, 8] });
-  const glowOpacity = glow.interpolate({ inputRange: [0, 1], outputRange: [0.15, 0.5] });
-  const glowScale = glow.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1.15] });
+  // Glow mas tenue; en el tema claro se reduce aun mas para que no parezca una mancha
+  const isLightTheme = themeKey === 'graphite';
+  const glowOpacity = glow.interpolate({
+    inputRange: [0, 1],
+    outputRange: isLightTheme ? [0.04, 0.12] : [0.12, 0.32],
+  });
+  const glowScale = glow.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1.0] });
 
   return (
     <KeyboardAvoidingView
@@ -252,10 +257,10 @@ const styles = StyleSheet.create({
   logoZone: { alignItems: 'center', justifyContent: 'center', width: '100%' },
   glow: {
     position: 'absolute',
-    width: 260,
-    height: 130,
-    borderRadius: 130,
-    ...(Platform.OS === 'web' ? { filter: 'blur(60px)' } as any : {}),
+    width: 200,
+    height: 90,
+    borderRadius: 100,
+    ...(Platform.OS === 'web' ? { filter: 'blur(40px)' } as any : {}),
   },
   logo: { width: '100%', maxWidth: 320, height: 112 },
   tagline: { fontSize: 14, marginTop: 16, marginBottom: 40, textAlign: 'center' },
