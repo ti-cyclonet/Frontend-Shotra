@@ -22,11 +22,24 @@ const storage = {
   },
 };
 
+export interface RegisterData {
+  email: string;
+  password: string;
+  firstName: string;
+  secondName?: string;
+  firstSurname: string;
+  secondSurname?: string;
+  documentType?: string;
+  documentNumber?: string;
+  phone?: string;
+}
+
 interface AuthContextValue {
   isAuthenticated: boolean;
   loading: boolean;
   user: any;
   login: (email: string, password: string) => Promise<void>;
+  register: (data: RegisterData) => Promise<{ message: string; verificationRequired?: boolean }>;
   logout: () => Promise<void>;
 }
 
@@ -85,6 +98,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser({ token, profile: profileData, ...data.user });
   }
 
+  async function register(data: RegisterData) {
+    const res = await fetch(`${AUTHORIZA_URL}/auth/register-shotra`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(body.message || 'No se pudo completar el registro');
+    }
+    return { message: body.message, verificationRequired: body.verificationRequired };
+  }
+
   async function logout() {
     await storage.removeItem(TOKEN_KEY);
     setUser(null);
@@ -92,7 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated: !!user, loading, user, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated: !!user, loading, user, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
