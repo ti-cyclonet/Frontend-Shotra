@@ -1,6 +1,6 @@
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView,
-  Platform, Image, Animated, Easing, ActivityIndicator, Pressable,
+  Platform, Image, Animated, ActivityIndicator, Pressable,
 } from 'react-native';
 import { useState, useRef, useEffect } from 'react';
 import { router } from 'expo-router';
@@ -24,8 +24,6 @@ export default function LoginScreen() {
   const logoAnim = useRef(new Animated.Value(0)).current;
   const formAnim = useRef(new Animated.Value(0)).current;
   const themeAnim = useRef(new Animated.Value(0)).current;
-  // Glow pulsante detras del logo
-  const glow = useRef(new Animated.Value(0)).current;
   // Escala del boton al presionar
   const btnScale = useRef(new Animated.Value(1)).current;
   // Shake al error
@@ -37,15 +35,7 @@ export default function LoginScreen() {
       Animated.spring(formAnim, { toValue: 1, friction: 8, tension: 55, useNativeDriver: useNative }),
       Animated.spring(themeAnim, { toValue: 1, friction: 8, tension: 55, useNativeDriver: useNative }),
     ]).start();
-
-    // Glow en loop
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glow, { toValue: 1, duration: 2200, easing: Easing.inOut(Easing.sin), useNativeDriver: useNative }),
-        Animated.timing(glow, { toValue: 0, duration: 2200, easing: Easing.inOut(Easing.sin), useNativeDriver: useNative }),
-      ]),
-    ).start();
-  }, [logoAnim, formAnim, themeAnim, glow]);
+  }, [logoAnim, formAnim, themeAnim]);
 
   const triggerShake = () => {
     shake.setValue(0);
@@ -84,13 +74,6 @@ export default function LoginScreen() {
   const formTranslate = formAnim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] });
   const themeTranslate = themeAnim.interpolate({ inputRange: [0, 1], outputRange: [30, 0] });
   const shakeX = shake.interpolate({ inputRange: [-1, 1], outputRange: [-8, 8] });
-  // Glow mas tenue; en el tema claro se reduce aun mas para que no parezca una mancha
-  const isLightTheme = themeKey === 'graphite';
-  const glowOpacity = glow.interpolate({
-    inputRange: [0, 1],
-    outputRange: isLightTheme ? [0.04, 0.12] : [0.12, 0.32],
-  });
-  const glowScale = glow.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1.0] });
 
   return (
     <KeyboardAvoidingView
@@ -98,17 +81,11 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
-        {/* Glow pulsante detras del logo */}
         <View style={styles.logoZone}>
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              styles.glow,
-              { backgroundColor: theme.accent, opacity: glowOpacity, transform: [{ scale: glowScale }] },
-            ]}
-          />
           <Animated.Image
-            source={require('../../assets/logo_gris.png')}
+            source={themeKey === 'black'
+              ? require('../../assets/logo_rojo.png')
+              : require('../../assets/logo_gris.png')}
             style={[styles.logo, { opacity: logoAnim, transform: [{ translateY: logoTranslate }, { scale: logoScale }] }]}
             resizeMode="contain"
           />
@@ -189,6 +166,12 @@ export default function LoginScreen() {
               )}
             </Pressable>
           </Animated.View>
+
+          <TouchableOpacity style={styles.registerLink} onPress={() => router.push('/(auth)/register')}>
+            <Text style={[styles.registerText, { color: theme.textMuted }]}>
+              ¿No tienes cuenta? <Text style={{ color: theme.accent, fontWeight: '800' }}>Regístrate</Text>
+            </Text>
+          </TouchableOpacity>
         </Animated.View>
 
         {/* Selector de tema */}
@@ -255,13 +238,6 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   logoZone: { alignItems: 'center', justifyContent: 'center', width: '100%' },
-  glow: {
-    position: 'absolute',
-    width: 200,
-    height: 90,
-    borderRadius: 100,
-    ...(Platform.OS === 'web' ? { filter: 'blur(40px)' } as any : {}),
-  },
   logo: { width: '100%', maxWidth: 320, height: 112 },
   tagline: { fontSize: 14, marginTop: 16, marginBottom: 40, textAlign: 'center' },
   form: { width: '100%', maxWidth: 340 },
@@ -317,4 +293,6 @@ const styles = StyleSheet.create({
   },
   swatchLabel: { fontSize: 12 },
   footer: { fontSize: 11, marginTop: 40 },
+  registerLink: { alignItems: 'center', marginTop: 18 },
+  registerText: { fontSize: 14 },
 });
