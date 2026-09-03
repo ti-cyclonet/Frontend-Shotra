@@ -116,6 +116,31 @@ Configura en Amplify las variables de entorno:
 
 ---
 
+## 4.5 Actualizaciones OTA (EAS Update) — sin recompilar ni encolar
+
+Para cambios de **JavaScript/TS/estilos/pantallas** (la mayoría del día a día),
+NO se recompila ni se espera la cola de builds. Se publican por OTA en segundos:
+
+```bash
+# publicar a la rama de un canal (production / preview)
+eas update --branch production --message "descripcion del cambio"
+```
+
+Las apps instaladas (builds hechos con `expo-updates` y el canal correspondiente)
+descargan el update al abrirse.
+
+**Cuándo SÍ hay que recompilar (build nuevo, con cola):**
+- Agregar/quitar dependencias con código nativo.
+- Cambiar permisos, ícono, splash, versión de SDK o `runtimeVersion`.
+- Cambios en configuración nativa de `app.json`.
+
+**Cuándo basta con `eas update` (sin build):**
+- Cambios de UI, lógica, textos, colores, temas, nuevas pantallas, fixes JS.
+
+> Los canales están mapeados en `eas.json`: `production`, `preview`, `development`.
+> `runtimeVersion` usa política `appVersion`: un update solo aplica a builds cuya
+> versión de la app coincide. Si subes `version` en `app.json`, necesitas un build nuevo.
+
 ## 5. Notas
 
 - **Costo**: EAS Build tiene un tier gratuito con builds limitados por mes; el
