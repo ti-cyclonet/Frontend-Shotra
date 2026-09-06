@@ -2,6 +2,16 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, Platform } from 'react-native';
 import { useEffect } from 'react';
+import {
+  useFonts,
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+  Poppins_800ExtraBold,
+  Poppins_900Black,
+} from '@expo-google-fonts/poppins';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from '../src/context/AuthContext';
 import { NotificationsProvider } from '../src/context/NotificationsContext';
 import { DialogProvider } from '../src/context/DialogProvider';
@@ -65,15 +75,32 @@ function ThemedStack() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    Poppins_400Regular,
+    Poppins_500Medium,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
+    Poppins_800ExtraBold,
+    Poppins_900Black,
+  });
+
+  // Mantener la pantalla en negro hasta que Poppins este lista para evitar
+  // el "flash" de la fuente del sistema.
+  if (!fontsLoaded) {
+    return <View style={{ flex: 1, backgroundColor: '#000000' }} />;
+  }
+
   return (
-    <ThemeProvider>
-      <DialogProvider>
-        <AuthProvider>
-          <NotificationsProvider>
-            <ThemedStack />
-          </NotificationsProvider>
-        </AuthProvider>
-      </DialogProvider>
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <DialogProvider>
+          <AuthProvider>
+            <NotificationsProvider>
+              <ThemedStack />
+            </NotificationsProvider>
+          </AuthProvider>
+        </DialogProvider>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }

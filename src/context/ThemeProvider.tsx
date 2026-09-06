@@ -18,6 +18,11 @@ export interface Theme {
   inputPlaceholder: string; // placeholder de los campos
   accent: string;       // color de marca / botones
   accentText: string;   // texto sobre el acento
+  accentDark: string;   // variante oscura del acento (fin del gradiente / hover)
+  accentSoft: string;   // tinte suave del acento (fondos de chips, badges)
+  danger: string;       // rojo de error / destructivo
+  success: string;      // verde de exito
+  warning: string;      // ambar de advertencia
   tabBar: string;       // fondo de la barra de pestanas
   swatch: string;       // color representativo en el selector
   // Efecto vidrio (glassmorphism) para tarjetas
@@ -42,6 +47,11 @@ export const THEMES: Record<ThemeKey, Theme> = {
     inputPlaceholder: '#9a9a9a',
     accent: '#990000',      // rojo de la paleta como acento sobre fondo claro
     accentText: '#ffffff',
+    accentDark: '#6b0000',  // fin del gradiente del FAB / CTA
+    accentSoft: 'rgba(153,0,0,0.10)', // tinte para chips y badges
+    danger: '#dc2626',
+    success: '#16a34a',
+    warning: '#d97706',
     tabBar: '#ffffff',
     swatch: '#f5f5f5',
     // Tema claro: tarjetas blancas que resaltan sobre el fondo gris #f5f5f5,
@@ -65,6 +75,11 @@ export const THEMES: Record<ThemeKey, Theme> = {
     inputPlaceholder: '#777777',
     accent: '#4ecdc4',
     accentText: '#04211f',
+    accentDark: '#2f9d95',
+    accentSoft: 'rgba(78,205,196,0.14)',
+    danger: '#ff6b6b',
+    success: '#4ecdc4',
+    warning: '#ffd166',
     tabBar: '#000000',
     swatch: '#000000',
     glass: 'rgba(255,255,255,0.045)',
@@ -86,6 +101,11 @@ export const THEMES: Record<ThemeKey, Theme> = {
     inputPlaceholder: '#999999',
     accent: '#141414',
     accentText: '#ffffff',
+    accentDark: '#000000',
+    accentSoft: 'rgba(0,0,0,0.20)',
+    danger: '#ffb3b3',
+    success: '#7ee0d8',
+    warning: '#ffd166',
     tabBar: 'rgba(0,0,0,0.35)',
     swatch: '#990000',
     glass: 'rgba(255,255,255,0.1)',
