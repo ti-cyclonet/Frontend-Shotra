@@ -1,15 +1,28 @@
-import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
-import { useState, useEffect, useCallback } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { View, FlatList, StyleSheet } from 'react-native';
+import { useState, useCallback } from 'react';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router, useFocusEffect } from 'expo-router';
 import { api } from '../../src/services/api';
-import { useGlass } from '../../src/context/ThemeProvider';
+import { useTheme } from '../../src/context/ThemeProvider';
+import { Text, PressableCard, Badge, IconChip, Button, spacing, radius, typography } from '../../src/components/ui';
 
 type Tab = 'requests' | 'proposals';
 
+// Mapea el estado a un color de chip semantico del design system
+const statusChip: Record<string, 'teal' | 'amber' | 'green' | 'blue' | 'red' | 'neutral'> = {
+  PUBLISHED: 'teal', IN_PROPOSALS: 'amber', ACCEPTED: 'green',
+  IN_PROGRESS: 'blue', COMPLETED: 'blue', CANCELLED: 'red',
+  PENDING: 'amber', REJECTED: 'red', WITHDRAWN: 'neutral',
+};
+
+const statusLabel: Record<string, string> = {
+  PENDING: 'Pendiente', ACCEPTED: 'Aceptada', REJECTED: 'Rechazada', WITHDRAWN: 'Retirada',
+  PUBLISHED: 'Publicada', IN_PROPOSALS: 'Con propuestas', IN_PROGRESS: 'En progreso',
+  COMPLETED: 'Completada', CANCELLED: 'Cancelada',
+};
+
 export default function ActivityScreen() {
-  const glass = useGlass();
-  const theme = glass.theme;
+  const { theme } = useTheme();
   const [activeTab, setActiveTab] = useState<Tab>('requests');
   const [requests, setRequests] = useState<any[]>([]);
   const [proposals, setProposals] = useState<any[]>([]);
@@ -21,136 +34,120 @@ export default function ActivityScreen() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const statusColor: Record<string, string> = {
-    PUBLISHED: '#4ecdc4', IN_PROPOSALS: '#f39c12', ACCEPTED: '#2ecc71',
-    IN_PROGRESS: '#3498db', COMPLETED: '#9b59b6', CANCELLED: '#e74c3c',
-    PENDING: '#f39c12', REJECTED: '#e74c3c', WITHDRAWN: '#7f8c8d',
-  };
+  const renderRequest = ({ item, index }: { item: any; index: number }) => (
+    <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 55).springify().damping(16)}>
+      <PressableCard padding={16} rounded={radius['2xl']} onPress={() => router.push(`/request/${item.id}`)} style={styles.card}>
+        <View style={styles.row}>
+          <Text variant="cardTitle" style={{ flex: 1, marginRight: spacing[2] }} numberOfLines={1}>{item.title}</Text>
+          <Badge label={statusLabel[item.status] || item.status} color={statusChip[item.status] || 'neutral'} />
+        </View>
+        <Text variant="caption" muted style={{ marginTop: 4 }}>{item.category?.name}</Text>
+        <View style={[styles.footerRow, { borderTopColor: theme.glassBorder }]}>
+          <IconChip icon="people-outline" color="red" size={30} />
+          <Text variant="captionStrong" color={theme.accent}>{item._count?.proposals || 0} propuestas recibidas</Text>
+        </View>
+      </PressableCard>
+    </Animated.View>
+  );
 
-  const statusLabel: Record<string, string> = {
-    PENDING: 'Pendiente', ACCEPTED: 'Aceptada', REJECTED: 'Rechazada', WITHDRAWN: 'Retirada',
-    PUBLISHED: 'Publicada', IN_PROPOSALS: 'Con propuestas', IN_PROGRESS: 'En progreso',
-    COMPLETED: 'Completada', CANCELLED: 'Cancelada',
-  };
+  const renderProposal = ({ item, index }: { item: any; index: number }) => (
+    <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 55).springify().damping(16)}>
+      <PressableCard
+        padding={16}
+        rounded={radius['2xl']}
+        onPress={() =>
+          item.status === 'ACCEPTED' && item.contract?.id
+            ? router.push(`/contract/${item.contract.id}`)
+            : router.push(`/request/${item.requestId || item.request?.id}`)
+        }
+        style={styles.card}
+      >
+        <View style={styles.row}>
+          <Text variant="cardTitle" style={{ flex: 1, marginRight: spacing[2] }} numberOfLines={1}>{item.request?.title}</Text>
+          <Badge label={statusLabel[item.status] || item.status} color={statusChip[item.status] || 'neutral'} />
+        </View>
+        <Text variant="caption" muted style={{ marginTop: 4 }}>{item.request?.category?.name}</Text>
+        <View style={[styles.footerRow, { borderTopColor: theme.glassBorder }]}>
+          <Text variant="captionStrong" color={theme.accent}>Mi oferta: ${item.price?.toLocaleString()}</Text>
+          {item.status === 'ACCEPTED' && (
+            <Text variant="captionStrong" color={theme.success}>
+              {item.contract?.id ? 'Ver contrato →' : 'Te la aceptaron →'}
+            </Text>
+          )}
+        </View>
+      </PressableCard>
+    </Animated.View>
+  );
+
+  const empty = (icon: any, title: string, sub: string) => (
+    <View style={styles.empty}>
+      <IconChip icon={icon} color="neutral" size={64} rounded={radius['2xl']} />
+      <Text variant="h2" style={{ marginTop: spacing[4] }}>{title}</Text>
+      <Text variant="body" muted style={{ marginTop: 6, textAlign: 'center' }}>{sub}</Text>
+    </View>
+  );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Mi actividad</Text>
+        <Text variant="sectionLabel" muted>Shotra</Text>
+        <Text variant="h1">Mi actividad</Text>
       </View>
 
-      {/* Sub-tabs */}
+      {/* Sub-tabs tipo pill */}
       <View style={styles.tabs}>
-        <TouchableOpacity
-          style={[styles.tab, glass.chip, activeTab === 'requests' && { backgroundColor: theme.accent, borderColor: theme.accent }]}
-          onPress={() => setActiveTab('requests')}
-        >
-          <Text style={[styles.tabText, { color: activeTab === 'requests' ? theme.accentText : theme.textMuted }]}>
-            Solicito ({requests.length})
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, glass.chip, activeTab === 'proposals' && { backgroundColor: theme.accent, borderColor: theme.accent }]}
-          onPress={() => setActiveTab('proposals')}
-        >
-          <Text style={[styles.tabText, { color: activeTab === 'proposals' ? theme.accentText : theme.textMuted }]}>
-            Ofrezco ({proposals.length})
-          </Text>
-        </TouchableOpacity>
+        <TabPill label={`Solicito (${requests.length})`} active={activeTab === 'requests'} onPress={() => setActiveTab('requests')} />
+        <TabPill label={`Ofrezco (${proposals.length})`} active={activeTab === 'proposals'} onPress={() => setActiveTab('proposals')} />
       </View>
 
-      {/* Mis solicitudes (como solicitante) */}
-      {activeTab === 'requests' && (
+      {activeTab === 'requests' ? (
         <FlatList
           data={requests}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
-          renderItem={({ item }) => (
-            <TouchableOpacity style={[styles.card, glass.card]} onPress={() => router.push(`/request/${item.id}`)}>
-              <View style={styles.row}>
-                <Text style={[styles.title, { color: theme.text }]} numberOfLines={1}>{item.title}</Text>
-                <View style={[styles.statusBadge, { backgroundColor: statusColor[item.status] || '#555' }]}>
-                  <Text style={styles.statusText}>{statusLabel[item.status] || item.status}</Text>
-                </View>
-              </View>
-              <Text style={[styles.category, { color: theme.textMuted }]}>{item.category?.name}</Text>
-              <Text style={[styles.metaInfo, { color: theme.accent }]}>{item._count?.proposals || 0} propuestas recibidas</Text>
-            </TouchableOpacity>
-          )}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Ionicons name="document-text-outline" size={48} color={theme.textMuted} />
-              <Text style={[styles.emptyText, { color: theme.textMuted }]}>No tienes solicitudes</Text>
-              <Text style={[styles.emptySubtext, { color: theme.textMuted }]}>Publica tu primera solicitud de servicio</Text>
-            </View>
-          }
+          showsVerticalScrollIndicator={false}
+          renderItem={renderRequest}
+          ListEmptyComponent={empty('document-text-outline', 'No tienes solicitudes', 'Publica tu primera solicitud de servicio')}
         />
-      )}
-
-      {/* Mis propuestas (como ofertante) */}
-      {activeTab === 'proposals' && (
+      ) : (
         <FlatList
           data={proposals}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[styles.card, glass.card]}
-              onPress={() =>
-                item.status === 'ACCEPTED' && item.contract?.id
-                  ? router.push(`/contract/${item.contract.id}`)
-                  : router.push(`/request/${item.requestId || item.request?.id}`)
-              }
-            >
-              <View style={styles.row}>
-                <Text style={[styles.title, { color: theme.text }]} numberOfLines={1}>{item.request?.title}</Text>
-                <View style={[styles.statusBadge, { backgroundColor: statusColor[item.status] || '#555' }]}>
-                  <Text style={styles.statusText}>{statusLabel[item.status] || item.status}</Text>
-                </View>
-              </View>
-              <Text style={[styles.category, { color: theme.textMuted }]}>{item.request?.category?.name}</Text>
-              <View style={styles.row}>
-                <Text style={[styles.metaInfo, { color: theme.accent }]}>Mi oferta: ${item.price?.toLocaleString()}</Text>
-                {item.status === 'ACCEPTED' && (
-                  <Text style={styles.acceptedHint}>
-                    {item.contract?.id ? 'Ver contrato →' : '¡Te la aceptaron! →'}
-                  </Text>
-                )}
-              </View>
-            </TouchableOpacity>
-          )}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Ionicons name="chatbubble-ellipses-outline" size={48} color={theme.textMuted} />
-              <Text style={[styles.emptyText, { color: theme.textMuted }]}>No has enviado propuestas</Text>
-              <Text style={[styles.emptySubtext, { color: theme.textMuted }]}>Explora solicitudes y envia tu propuesta</Text>
-            </View>
-          }
+          showsVerticalScrollIndicator={false}
+          renderItem={renderProposal}
+          ListEmptyComponent={empty('chatbubble-ellipses-outline', 'No has enviado propuestas', 'Explora solicitudes y envia tu propuesta')}
         />
       )}
     </View>
   );
 }
 
+function TabPill({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  const { theme } = useTheme();
+  return (
+    <PressableCard
+      padding={false}
+      rounded={radius.pill}
+      strong={!active}
+      onPress={onPress}
+      style={[styles.tab, active && { backgroundColor: theme.accent, borderColor: theme.accent }]}
+    >
+      <Text style={[typography.captionStrong, { color: active ? theme.accentText : theme.textMuted, paddingVertical: 10, textAlign: 'center' }]}>
+        {label}
+      </Text>
+    </PressableCard>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
-  header: { padding: 16, paddingTop: 56 },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: '#fff' },
-  tabs: { flexDirection: 'row', paddingHorizontal: 16, gap: 8, marginBottom: 8 },
-  tab: { flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: '#1a1a1a', alignItems: 'center', borderWidth: 1, borderColor: '#333' },
-  tabActive: { backgroundColor: '#4ecdc4', borderColor: '#4ecdc4' },
-  tabText: { color: '#aaa', fontSize: 13, fontWeight: '700' },
-  tabTextActive: { color: '#000' },
-  list: { padding: 16, paddingTop: 8 },
-  card: { backgroundColor: '#111', borderRadius: 14, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#222' },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  title: { fontSize: 16, fontWeight: '700', color: '#fff', flex: 1, marginRight: 8 },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  statusText: { color: '#fff', fontSize: 10, fontWeight: '700' },
-  category: { color: '#888', fontSize: 13, marginBottom: 4 },
-  metaInfo: { color: '#4ecdc4', fontSize: 13, fontWeight: '600' },
-  acceptedHint: { color: '#2ecc71', fontSize: 12, fontWeight: '700' },
-  empty: { alignItems: 'center', paddingTop: 80 },
-  emptyText: { color: '#666', fontSize: 16, marginTop: 16, fontWeight: '600' },
-  emptySubtext: { color: '#444', fontSize: 13, marginTop: 6 },
+  container: { flex: 1 },
+  header: { paddingHorizontal: spacing[5], paddingTop: 60, paddingBottom: spacing[3] },
+  tabs: { flexDirection: 'row', paddingHorizontal: spacing[5], gap: spacing[2], marginBottom: spacing[2] },
+  tab: { flex: 1, alignItems: 'center' },
+  list: { paddingHorizontal: spacing[5], paddingTop: spacing[2], paddingBottom: 120 },
+  card: { marginBottom: spacing[3] },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  footerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing[2], marginTop: spacing[3], paddingTop: spacing[3], borderTopWidth: 1 },
+  empty: { alignItems: 'center', paddingTop: 100, paddingHorizontal: spacing[6] },
 });

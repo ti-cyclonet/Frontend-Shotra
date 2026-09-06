@@ -1,15 +1,17 @@
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl, Animated, Easing, Platform, Pressable } from 'react-native';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { View, FlatList, StyleSheet, Pressable, RefreshControl } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSpring, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { api } from '../../src/services/api';
 import { useNotifications } from '../../src/context/NotificationsContext';
-import { useGlass } from '../../src/context/ThemeProvider';
+import { useTheme } from '../../src/context/ThemeProvider';
+import { Text, Card, IconChip, Badge, CountDot, spacing, radius, motion, typography } from '../../src/components/ui';
 
-const useNativeDriver = Platform.OS !== 'web';
+type IoniconName = keyof typeof Ionicons.glyphMap;
 
 /** Icono representativo segun el nombre de la categoria */
-function categoryIcon(name?: string): any {
+function categoryIcon(name?: string): IoniconName {
   const n = (name || '').toLowerCase();
   if (n.includes('comida') || n.includes('delivery')) return 'fast-food';
   if (n.includes('mercado')) return 'cart';
@@ -22,60 +24,51 @@ function categoryIcon(name?: string): any {
 
 /** Campana con pulso cuando hay notificaciones sin leer */
 function NotificationBell({ unread, onPress, accent, text }: { unread: number; onPress: () => void; accent: string; text: string }) {
-  const pulse = useRef(new Animated.Value(1)).current;
+  const scale = useSharedValue(1);
 
   useEffect(() => {
     if (unread > 0) {
-      const loop = Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulse, { toValue: 1.25, duration: 500, easing: Easing.out(Easing.quad), useNativeDriver: useNativeDriver }),
-          Animated.timing(pulse, { toValue: 1, duration: 500, easing: Easing.in(Easing.quad), useNativeDriver: useNativeDriver }),
-        ]),
+      scale.value = withRepeat(
+        withSequence(withTiming(1.2, { duration: 500 }), withTiming(1, { duration: 500 })),
+        -1,
+        false,
       );
-      loop.start();
-      return () => loop.stop();
+    } else {
+      scale.value = withTiming(1);
     }
-    pulse.setValue(1);
-  }, [unread, pulse]);
+  }, [unread, scale]);
+
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
   return (
-    <TouchableOpacity style={styles.bell} onPress={onPress}>
-      <Ionicons name={unread > 0 ? 'notifications' : 'notifications-outline'} size={24} color={unread > 0 ? accent : text} />
+    <Pressable onPress={onPress} style={styles.bell} hitSlop={8}>
+      <Animated.View style={style}>
+        <Ionicons name={unread > 0 ? 'notifications' : 'notifications-outline'} size={24} color={unread > 0 ? accent : text} />
+      </Animated.View>
       {unread > 0 && (
-        <Animated.View style={[styles.badge, { transform: [{ scale: pulse }] }]}>
-          <Text style={styles.badgeText}>{unread > 9 ? '9+' : unread}</Text>
-        </Animated.View>
+        <View style={styles.bellBadge}>
+          <CountDot count={unread} />
+        </View>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
-/** Tarjeta con animacion de entrada escalonada y escala al presionar */
-function AnimatedCard({ index, children, onPress }: { index: number; children: React.ReactNode; onPress: () => void }) {
-  const anim = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    Animated.timing(anim, {
-      toValue: 1,
-      duration: 380,
-      delay: Math.min(index, 8) * 70,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: useNativeDriver,
-    }).start();
-  }, [anim, index]);
-
-  const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [24, 0] });
-
+/** Tarjeta presionable con micro-escala springy */
+function FeedCard({ index, children, onPress }: { index: number; children: React.ReactNode; onPress: () => void }) {
+  const scale = useSharedValue(1);
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   return (
-    <Animated.View style={{ opacity: anim, transform: [{ translateY }, { scale }] }}>
-      <Pressable
-        onPress={onPress}
-        onPressIn={() => Animated.spring(scale, { toValue: 0.97, useNativeDriver: useNativeDriver }).start()}
-        onPressOut={() => Animated.spring(scale, { toValue: 1, friction: 4, useNativeDriver: useNativeDriver }).start()}
-      >
-        {children}
-      </Pressable>
+    <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 60).springify().damping(16)}>
+      <Animated.View style={style}>
+        <Pressable
+          onPress={onPress}
+          onPressIn={() => (scale.value = withSpring(0.97, motion.spring))}
+          onPressOut={() => (scale.value = withSpring(1, motion.spring))}
+        >
+          {children}
+        </Pressable>
+      </Animated.View>
     </Animated.View>
   );
 }
@@ -100,12 +93,10 @@ export default function FeedScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const { unread } = useNotifications();
-  const glass = useGlass();
-  const theme = glass.theme;
+  const { theme } = useTheme();
 
   const loadFeed = useCallback(async () => {
     try {
-      // TODO: obtener ubicacion real del usuario
       const data = await api.get<ServiceRequest[]>('/requests');
       setRequests(data);
     } catch (err) {
@@ -127,48 +118,48 @@ export default function FeedScreen() {
   };
 
   const renderItem = ({ item, index }: { item: ServiceRequest; index: number }) => (
-    <AnimatedCard index={index} onPress={() => router.push(`/request/${item.id}`)}>
-      <View style={[styles.card, glass.card]}>
+    <FeedCard index={index} onPress={() => router.push(`/request/${item.id}`)}>
+      <Card padding={16} rounded={radius['2xl']} style={styles.card}>
         <View style={styles.cardHeader}>
-          <View style={[styles.categoryBadge, glass.chip]}>
-            <Ionicons name={categoryIcon(item.category?.name)} size={13} color={theme.accent} />
-            <Text style={[styles.categoryText, { color: theme.text }]}>{item.category?.name}</Text>
+          <View style={styles.catRow}>
+            <IconChip icon={categoryIcon(item.category?.name)} size={34} rounded={radius.md} />
+            <Text variant="captionStrong" style={{ marginLeft: spacing[2] }}>{item.category?.name}</Text>
           </View>
           {item.isUrgent && (
-            <View style={styles.urgentBadge}>
-              <Ionicons name="flash" size={12} color="#fff" />
-              <Text style={styles.urgentText}>Urgente</Text>
-            </View>
+            <Badge label="Urgente" color="red" />
           )}
         </View>
-        <Text style={[styles.cardTitle, { color: theme.text }]}>{item.title}</Text>
-        <Text style={[styles.cardDesc, { color: theme.textMuted }]} numberOfLines={2}>{item.description}</Text>
+        <Text variant="cardTitle" style={{ marginBottom: 4 }}>{item.title}</Text>
+        <Text variant="body" muted numberOfLines={2} style={{ marginBottom: spacing[3] }}>{item.description}</Text>
         <View style={styles.cardFooter}>
           <View style={styles.budgetWrap}>
-            <Ionicons name="cash-outline" size={15} color={theme.accent} />
-            <Text style={[styles.budget, { color: theme.accent }]}>{formatBudget(item.budgetMin, item.budgetMax)}</Text>
+            <Ionicons name="cash-outline" size={16} color={theme.accent} />
+            <Text variant="bodyStrong" color={theme.accent}>{formatBudget(item.budgetMin, item.budgetMax)}</Text>
           </View>
           <View style={styles.meta}>
             {item.distance !== undefined && (
               <View style={styles.metaChip}>
-                <Ionicons name="location-outline" size={12} color={theme.textMuted} />
-                <Text style={[styles.metaText, { color: theme.textMuted }]}>{item.distance} km</Text>
+                <Ionicons name="location-outline" size={13} color={theme.textMuted} />
+                <Text variant="caption" muted>{item.distance} km</Text>
               </View>
             )}
             <View style={styles.metaChip}>
-              <Ionicons name="chatbubble-ellipses-outline" size={12} color={theme.textMuted} />
-              <Text style={[styles.metaText, { color: theme.textMuted }]}>{item._count?.proposals || 0}</Text>
+              <Ionicons name="chatbubble-ellipses-outline" size={13} color={theme.textMuted} />
+              <Text variant="caption" muted>{item._count?.proposals || 0}</Text>
             </View>
           </View>
         </View>
-      </View>
-    </AnimatedCard>
+      </Card>
+    </FeedCard>
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Explorar servicios</Text>
+        <View>
+          <Text variant="sectionLabel" muted>Shotra</Text>
+          <Text variant="h1">Explorar servicios</Text>
+        </View>
         <NotificationBell unread={unread} onPress={() => router.push('/notifications')} accent={theme.accent} text={theme.text} />
       </View>
       <FlatList
@@ -176,13 +167,16 @@ export default function FeedScreen() {
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="search-outline" size={48} color={theme.textMuted} />
-            <Text style={[styles.emptyText, { color: theme.textMuted }]}>No hay solicitudes cerca de ti</Text>
-            <Text style={[styles.emptySubtext, { color: theme.textMuted }]}>Activa tu ubicacion para ver servicios cercanos</Text>
-          </View>
+          !loading ? (
+            <View style={styles.empty}>
+              <IconChip icon="search-outline" color="neutral" size={64} rounded={radius['2xl']} />
+              <Text variant="h2" style={{ marginTop: spacing[4] }}>Nada por aqui todavia</Text>
+              <Text variant="body" muted style={{ marginTop: 6, textAlign: 'center' }}>Activa tu ubicacion para ver servicios cercanos</Text>
+            </View>
+          ) : null
         }
       />
     </View>
@@ -190,28 +184,17 @@ export default function FeedScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, paddingTop: 56 },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: '#fff' },
+  container: { flex: 1 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: spacing[5], paddingTop: 60, paddingBottom: spacing[3] },
   bell: { padding: 4 },
-  badge: { position: 'absolute', top: 0, right: 0, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: '#ff4444', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4 },
-  badgeText: { color: '#fff', fontSize: 10, fontWeight: '800' },
-  list: { padding: 16, paddingTop: 8 },
-  card: { backgroundColor: '#111', borderRadius: 16, padding: 18, marginBottom: 14, borderWidth: 1, borderColor: '#222' },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-  categoryBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#1c1c1c', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1, borderColor: '#2a2a2a' },
-  categoryText: { color: '#ccc', fontSize: 12, fontWeight: '600' },
-  urgentBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#ff4444', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  urgentText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  cardTitle: { fontSize: 17, fontWeight: '700', color: '#fff', marginBottom: 6 },
-  cardDesc: { fontSize: 14, color: '#888', lineHeight: 20, marginBottom: 12 },
+  bellBadge: { position: 'absolute', top: -2, right: -2 },
+  list: { paddingHorizontal: spacing[5], paddingTop: spacing[2], paddingBottom: 120 },
+  card: { marginBottom: spacing[3] },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing[3] },
+  catRow: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  budgetWrap: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  budget: { fontSize: 16, fontWeight: '800', color: '#4ecdc4' },
-  meta: { flexDirection: 'row', gap: 10 },
+  budgetWrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  meta: { flexDirection: 'row', gap: spacing[3] },
   metaChip: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metaText: { color: '#888', fontSize: 12, fontWeight: '600' },
-  empty: { alignItems: 'center', paddingTop: 80 },
-  emptyText: { color: '#666', fontSize: 16, marginTop: 16, fontWeight: '600' },
-  emptySubtext: { color: '#444', fontSize: 13, marginTop: 6 },
+  empty: { alignItems: 'center', paddingTop: 100, paddingHorizontal: spacing[6] },
 });

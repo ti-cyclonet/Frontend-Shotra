@@ -1,10 +1,13 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Modal, FlatList, Pressable } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, ScrollView, Modal, FlatList, Pressable, TextInput } from 'react-native';
 import { useState, useEffect, useMemo } from 'react';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../src/services/api';
 import { alertDialog } from '../../src/services/dialog';
-import { useGlass } from '../../src/context/ThemeProvider';
+import { useTheme } from '../../src/context/ThemeProvider';
+import { Text, Card, PressableCard, Button, Input, IconChip, SectionLabel, spacing, radius, typography } from '../../src/components/ui';
+
+type IoniconName = keyof typeof Ionicons.glyphMap;
 
 interface Category {
   id: string;
@@ -14,7 +17,7 @@ interface Category {
 }
 
 /** Icono representativo segun el nombre de la categoria/grupo */
-function catIcon(name?: string): any {
+function catIcon(name?: string): IoniconName {
   const n = (name || '').toLowerCase();
   if (n.includes('comida') || n.includes('delivery')) return 'fast-food';
   if (n.includes('mercado')) return 'cart';
@@ -27,8 +30,7 @@ function catIcon(name?: string): any {
 }
 
 export default function CreateRequestScreen() {
-  const glass = useGlass();
-  const theme = glass.theme;
+  const { theme } = useTheme();
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -46,7 +48,6 @@ export default function CreateRequestScreen() {
 
   const selected = useMemo(() => categories.find((c) => c.id === selectedCategory), [categories, selectedCategory]);
 
-  // Filtrado + agrupacion por categoria padre para escalar a muchas categorias
   const grouped = useMemo(() => {
     const q = search.trim().toLowerCase();
     const filtered = q
@@ -98,94 +99,79 @@ export default function CreateRequestScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={[styles.headerTitle, { color: theme.text }]}>Publicar solicitud</Text>
-      <Text style={[styles.subtitle, { color: theme.textMuted }]}>Describe lo que necesitas y recibe propuestas</Text>
+    <ScrollView style={{ flex: 1, backgroundColor: theme.background }} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <Text variant="sectionLabel" muted>Shotra</Text>
+      <Text variant="h1">Publicar solicitud</Text>
+      <Text variant="body" muted style={{ marginTop: 4 }}>Describe lo que necesitas y recibe propuestas</Text>
 
-      {/* Selector de categoria (abre modal con busqueda) */}
-      <Text style={[styles.label, { color: theme.textMuted }]}>Categoria *</Text>
-      <TouchableOpacity
-        style={[styles.selector, glass.card]}
-        onPress={() => setPickerOpen(true)}
-        activeOpacity={0.85}
-      >
-        <View style={styles.selectorLeft}>
-          <View style={[styles.selectorIcon, { backgroundColor: theme.accent + '22' }]}>
-            <Ionicons name={selected ? catIcon(selected.name) : 'grid-outline'} size={18} color={theme.accent} />
-          </View>
-          <View>
-            {selected ? (
-              <>
-                <Text style={[styles.selectorValue, { color: theme.text }]}>{selected.name}</Text>
-                {selected.parent?.name && (
-                  <Text style={[styles.selectorHint, { color: theme.textMuted }]}>{selected.parent.name}</Text>
-                )}
-              </>
-            ) : (
-              <Text style={[styles.selectorPlaceholder, { color: theme.textMuted }]}>Selecciona una categoria</Text>
-            )}
-          </View>
+      {/* Categoria */}
+      <SectionLabel>Categoria *</SectionLabel>
+      <PressableCard padding={14} rounded={radius.lg} onPress={() => setPickerOpen(true)} style={styles.selector}>
+        <IconChip icon={selected ? catIcon(selected.name) : 'grid-outline'} color="red" />
+        <View style={{ flex: 1 }}>
+          {selected ? (
+            <>
+              <Text variant="bodyStrong">{selected.name}</Text>
+              {selected.parent?.name && <Text variant="caption" muted>{selected.parent.name}</Text>}
+            </>
+          ) : (
+            <Text variant="body" muted>Selecciona una categoria</Text>
+          )}
         </View>
         <Ionicons name="chevron-down" size={20} color={theme.textMuted} />
-      </TouchableOpacity>
+      </PressableCard>
 
-      <Text style={[styles.label, { color: theme.textMuted }]}>Titulo *</Text>
-      <TextInput
-        style={[styles.input, glass.card, { color: theme.text }]}
-        value={title}
-        onChangeText={setTitle}
-        placeholder="Ej: Necesito delivery de comida"
-        placeholderTextColor={theme.textMuted}
-      />
+      <SectionLabel>Titulo *</SectionLabel>
+      <Input value={title} onChangeText={setTitle} placeholder="Ej: Necesito delivery de comida" />
 
-      <Text style={[styles.label, { color: theme.textMuted }]}>Descripcion *</Text>
-      <TextInput
-        style={[styles.input, styles.textArea, glass.card, { color: theme.text }]}
-        value={description}
-        onChangeText={setDescription}
-        placeholder="Detalla tu necesidad..."
-        placeholderTextColor={theme.textMuted}
-        multiline
-        numberOfLines={4}
-        textAlignVertical="top"
-      />
+      <SectionLabel>Descripcion *</SectionLabel>
+      <Input value={description} onChangeText={setDescription} placeholder="Detalla tu necesidad..." multiline numberOfLines={4} />
 
-      <Text style={[styles.label, { color: theme.textMuted }]}>Presupuesto (COP)</Text>
+      <SectionLabel>Presupuesto (COP)</SectionLabel>
       <View style={styles.row}>
-        <TextInput style={[styles.input, styles.half, glass.card, { color: theme.text }]} value={budgetMin} onChangeText={setBudgetMin} placeholder="Minimo" placeholderTextColor={theme.textMuted} keyboardType="numeric" />
-        <TextInput style={[styles.input, styles.half, glass.card, { color: theme.text }]} value={budgetMax} onChangeText={setBudgetMax} placeholder="Maximo" placeholderTextColor={theme.textMuted} keyboardType="numeric" />
+        <Input containerStyle={styles.half} value={budgetMin} onChangeText={setBudgetMin} placeholder="Minimo" keyboardType="numeric" />
+        <Input containerStyle={styles.half} value={budgetMax} onChangeText={setBudgetMax} placeholder="Maximo" keyboardType="numeric" />
       </View>
 
-      <TouchableOpacity style={[styles.urgentToggle, glass.card, isUrgent && { borderColor: '#ff4444' }]} onPress={() => setIsUrgent(!isUrgent)}>
-        <Ionicons name={isUrgent ? 'flash' : 'flash-outline'} size={20} color={isUrgent ? '#ff4444' : theme.textMuted} />
-        <Text style={[styles.urgentLabel, { color: isUrgent ? '#ff4444' : theme.textMuted }]}>Urgente (expira en 24h)</Text>
-      </TouchableOpacity>
+      <PressableCard
+        padding={14}
+        rounded={radius.lg}
+        onPress={() => setIsUrgent(!isUrgent)}
+        style={[styles.urgentToggle, isUrgent && { borderColor: theme.danger }]}
+      >
+        <IconChip icon={isUrgent ? 'flash' : 'flash-outline'} color={isUrgent ? 'red' : 'neutral'} />
+        <Text variant="bodyStrong" color={isUrgent ? theme.danger : theme.textMuted}>Urgente (expira en 24h)</Text>
+      </PressableCard>
 
-      <TouchableOpacity style={[styles.submitButton, { backgroundColor: theme.accent }]} onPress={handleSubmit} disabled={loading}>
-        <Ionicons name="megaphone" size={18} color={theme.accentText} />
-        <Text style={[styles.submitText, { color: theme.accentText }]}>{loading ? 'Publicando...' : 'Publicar solicitud'}</Text>
-      </TouchableOpacity>
+      <Button
+        label={loading ? 'Publicando...' : 'Publicar solicitud'}
+        variant="gradient"
+        icon="megaphone"
+        fullWidth
+        loading={loading}
+        onPress={handleSubmit}
+        style={{ marginTop: spacing[6] }}
+      />
 
-      {/* Modal selector de categoria con busqueda y agrupacion */}
+      {/* Modal selector de categoria */}
       <Modal visible={pickerOpen} transparent animationType="slide" onRequestClose={() => setPickerOpen(false)}>
         <Pressable style={styles.modalBackdrop} onPress={() => setPickerOpen(false)}>
           <Pressable style={[styles.modalSheet, { backgroundColor: theme.surface }]} onPress={() => {}}>
-            <View style={styles.modalHandle} />
-            <Text style={[styles.modalTitle, { color: theme.text }]}>Selecciona una categoria</Text>
+            <View style={[styles.modalHandle, { backgroundColor: theme.glassBorder }]} />
+            <Text variant="h2" style={{ marginBottom: spacing[4] }}>Selecciona una categoria</Text>
 
-            {/* Buscador */}
-            <View style={[styles.searchBox, glass.card]}>
+            <View style={[styles.searchBox, { backgroundColor: theme.glass, borderColor: theme.glassBorder }]}>
               <Ionicons name="search" size={18} color={theme.textMuted} />
               <TextInput
-                style={[styles.searchInput, { color: theme.text }]}
+                style={[typography.body, styles.searchInput, { color: theme.inputText }]}
                 value={search}
                 onChangeText={setSearch}
                 placeholder="Buscar categoria..."
-                placeholderTextColor={theme.textMuted}
+                placeholderTextColor={theme.inputPlaceholder}
                 autoFocus
               />
               {search.length > 0 && (
-                <TouchableOpacity onPress={() => setSearch('')}>
+                <TouchableOpacity onPress={() => setSearch('')} hitSlop={8}>
                   <Ionicons name="close-circle" size={18} color={theme.textMuted} />
                 </TouchableOpacity>
               )}
@@ -196,31 +182,32 @@ export default function CreateRequestScreen() {
               keyExtractor={(g) => g.title}
               style={styles.modalList}
               keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
               renderItem={({ item: group }) => (
-                <View style={styles.group}>
-                  <Text style={[styles.groupTitle, { color: theme.textMuted }]}>{group.title}</Text>
+                <View style={{ marginBottom: spacing[4] }}>
+                  <Text variant="sectionLabel" muted style={{ marginBottom: spacing[2] }}>{group.title}</Text>
                   {group.items.map((cat) => {
                     const isSel = cat.id === selectedCategory;
                     return (
-                      <TouchableOpacity
+                      <PressableCard
                         key={cat.id}
-                        style={[styles.catRow, glass.chip, isSel && { borderColor: theme.accent, backgroundColor: theme.accent + '1a' }]}
+                        padding={12}
+                        rounded={radius.lg}
                         onPress={() => pickCategory(cat.id)}
+                        style={[styles.catRow, isSel && { borderColor: theme.accent, backgroundColor: theme.accentSoft }]}
                       >
-                        <View style={[styles.catIconWrap, { backgroundColor: theme.accent + '22' }]}>
-                          <Ionicons name={catIcon(cat.name)} size={16} color={theme.accent} />
-                        </View>
-                        <Text style={[styles.catName, { color: theme.text }]}>{cat.name}</Text>
+                        <IconChip icon={catIcon(cat.name)} color="red" size={32} />
+                        <Text variant="bodyStrong" style={{ flex: 1 }}>{cat.name}</Text>
                         {isSel && <Ionicons name="checkmark-circle" size={20} color={theme.accent} />}
-                      </TouchableOpacity>
+                      </PressableCard>
                     );
                   })}
                 </View>
               )}
               ListEmptyComponent={
                 <View style={styles.emptyPicker}>
-                  <Ionicons name="search-outline" size={40} color={theme.textMuted} />
-                  <Text style={[styles.emptyPickerText, { color: theme.textMuted }]}>Sin resultados para "{search}"</Text>
+                  <IconChip icon="search-outline" color="neutral" size={48} />
+                  <Text variant="body" muted style={{ marginTop: spacing[3] }}>Sin resultados para "{search}"</Text>
                 </View>
               }
             />
@@ -232,41 +219,17 @@ export default function CreateRequestScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
-  content: { padding: 20, paddingTop: 56 },
-  headerTitle: { fontSize: 22, fontWeight: '800' },
-  subtitle: { fontSize: 14, marginTop: 4, marginBottom: 24 },
-  label: { fontSize: 13, fontWeight: '700', marginBottom: 8, marginTop: 16 },
-  input: { borderRadius: 12, padding: 14, fontSize: 15 },
-  textArea: { height: 100 },
-  row: { flexDirection: 'row', gap: 12 },
+  content: { padding: spacing[5], paddingTop: 60, paddingBottom: 120 },
+  row: { flexDirection: 'row', gap: spacing[3] },
   half: { flex: 1 },
-  // Selector de categoria
-  selector: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 12, padding: 14 },
-  selectorLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  selectorIcon: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
-  selectorValue: { fontSize: 15, fontWeight: '700' },
-  selectorHint: { fontSize: 12, marginTop: 1 },
-  selectorPlaceholder: { fontSize: 15 },
-  // Toggle urgente
-  urgentToggle: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 20, padding: 14, borderRadius: 12 },
-  urgentLabel: { fontSize: 14, fontWeight: '600' },
-  // Submit
-  submitButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, padding: 16, marginTop: 28 },
-  submitText: { fontSize: 16, fontWeight: '800' },
-  // Modal
+  selector: { flexDirection: 'row', alignItems: 'center', gap: spacing[3] },
+  urgentToggle: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], marginTop: spacing[5] },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  modalSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '80%' },
-  modalHandle: { alignSelf: 'center', width: 44, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.25)', marginBottom: 16 },
-  modalTitle: { fontSize: 18, fontWeight: '800', marginBottom: 16 },
-  searchBox: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 12, paddingHorizontal: 14, marginBottom: 12 },
-  searchInput: { flex: 1, paddingVertical: 12, fontSize: 15 },
+  modalSheet: { borderTopLeftRadius: radius['2xl'], borderTopRightRadius: radius['2xl'], padding: spacing[5], maxHeight: '82%' },
+  modalHandle: { alignSelf: 'center', width: 44, height: 5, borderRadius: 3, marginBottom: spacing[4] },
+  searchBox: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], borderRadius: radius.lg, borderWidth: 1, paddingHorizontal: spacing[4], marginBottom: spacing[3] },
+  searchInput: { flex: 1, paddingVertical: spacing[3] },
   modalList: { flexGrow: 0 },
-  group: { marginBottom: 16 },
-  groupTitle: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
-  catRow: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 12, padding: 12, marginBottom: 8 },
-  catIconWrap: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
-  catName: { flex: 1, fontSize: 15, fontWeight: '600' },
-  emptyPicker: { alignItems: 'center', paddingVertical: 40 },
-  emptyPickerText: { fontSize: 14, marginTop: 12 },
+  catRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], marginBottom: spacing[2] },
+  emptyPicker: { alignItems: 'center', paddingVertical: spacing[10] },
 });
