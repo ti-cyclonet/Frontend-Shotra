@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from './ThemeProvider';
 
 type DialogVariant = 'default' | 'success' | 'danger' | 'warning' | 'info';
 
@@ -37,6 +38,7 @@ const VARIANT_META: Record<DialogVariant, { icon: any; color: string }> = {
 };
 
 export function DialogProvider({ children }: { children: ReactNode }) {
+  const { theme } = useTheme();
   const [state, setState] = useState<InternalState>({ visible: false, title: '' });
 
   const close = useCallback((result: boolean) => {
@@ -73,18 +75,25 @@ export function DialogProvider({ children }: { children: ReactNode }) {
       {children}
       <Modal visible={state.visible} transparent animationType="fade" onRequestClose={() => close(false)}>
         <Pressable style={styles.backdrop} onPress={() => state.showCancel && close(false)}>
-          <Pressable style={styles.card} onPress={() => {}}>
+          <Pressable
+            style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}
+            onPress={() => {}}
+          >
             <View style={[styles.iconCircle, { backgroundColor: meta.color + '22', borderColor: meta.color }]}>
               <Ionicons name={meta.icon} size={30} color={meta.color} />
             </View>
 
-            <Text style={styles.title}>{state.title}</Text>
-            {!!state.message && <Text style={styles.message}>{state.message}</Text>}
+            <Text style={[styles.title, { color: theme.text }]}>{state.title}</Text>
+            {!!state.message && <Text style={[styles.message, { color: theme.textMuted }]}>{state.message}</Text>}
 
             <View style={styles.actions}>
               {state.showCancel && (
-                <TouchableOpacity style={styles.cancelBtn} onPress={() => close(false)} activeOpacity={0.8}>
-                  <Text style={styles.cancelText}>{state.cancelText}</Text>
+                <TouchableOpacity
+                  style={[styles.cancelBtn, { borderColor: theme.border }]}
+                  onPress={() => close(false)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.cancelText, { color: theme.textMuted }]}>{state.cancelText}</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity
@@ -124,15 +133,13 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 380,
-    backgroundColor: '#141414',
     borderRadius: 20,
     padding: 24,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#262626',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.25,
     shadowRadius: 20,
     elevation: 12,
   },
@@ -145,23 +152,22 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     marginBottom: 16,
   },
-  title: { color: '#fff', fontSize: 18, fontWeight: '800', textAlign: 'center', marginBottom: 8 },
-  message: { color: '#aaa', fontSize: 14, textAlign: 'center', lineHeight: 20, marginBottom: 20 },
+  title: { fontSize: 18, fontWeight: '800', textAlign: 'center', marginBottom: 8 },
+  message: { fontSize: 14, textAlign: 'center', lineHeight: 20, marginBottom: 20 },
   actions: { flexDirection: 'row', gap: 12, width: '100%', marginTop: 4 },
   cancelBtn: {
     flex: 1,
     paddingVertical: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#333',
     alignItems: 'center',
   },
-  cancelText: { color: '#bbb', fontSize: 15, fontWeight: '700' },
+  cancelText: { fontSize: 15, fontWeight: '700' },
   confirmBtn: {
     flex: 1,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
   },
-  confirmText: { color: '#000', fontSize: 15, fontWeight: '800' },
+  confirmText: { color: '#fff', fontSize: 15, fontWeight: '800' },
 });

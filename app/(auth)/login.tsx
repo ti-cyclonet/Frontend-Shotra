@@ -1,6 +1,6 @@
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView,
-  Platform, Image, Animated, ActivityIndicator, Pressable,
+  Platform, Image, Animated, ActivityIndicator, Pressable, ScrollView,
 } from 'react-native';
 import { useState, useRef, useEffect } from 'react';
 import { router } from 'expo-router';
@@ -89,8 +89,14 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: theme.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
       {/* Cabecera con banda de color a todo el ancho (estilo Kiri) */}
       <Animated.View
         style={[
@@ -208,6 +214,7 @@ export default function LoginScreen() {
 
         <Text style={[styles.footer, { color: theme.textMuted }]}>Powered by CycloNet S.A.S.</Text>
       </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -253,6 +260,9 @@ function ThemeSwatch({
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  // flexGrow: 1 permite que el contenido se centre cuando sobra espacio, pero
+  // habilita el scroll cuando el teclado reduce el area visible.
+  scrollContent: { flexGrow: 1 },
   content: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, paddingBottom: 24, paddingTop: 48 },
   // Cabecera estilo Kiri: banda de color a TODO el ancho, bordes rectos.
   // Logo grande centrado + frase, sin texto de marca.

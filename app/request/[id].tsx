@@ -96,15 +96,15 @@ export default function RequestDetailScreen() {
   };
 
   if (loading) {
-    return <View style={styles.container}><Text style={styles.loadingText}>Cargando...</Text></View>;
+    return <View style={[styles.container, { backgroundColor: theme.background }]}><Text style={[styles.loadingText, { color: theme.textMuted }]}>Cargando...</Text></View>;
   }
 
   if (!request) {
-    return <View style={styles.container}><Text style={styles.loadingText}>Solicitud no encontrada</Text></View>;
+    return <View style={[styles.container, { backgroundColor: theme.background }]}><Text style={[styles.loadingText, { color: theme.textMuted }]}>Solicitud no encontrada</Text></View>;
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={styles.content}>
       {/* Header con botón volver */}
       <TouchableOpacity style={styles.backButton} onPress={() => router.canGoBack() ? router.back() : router.push('/(tabs)/feed')}>
         <Ionicons name="arrow-back" size={22} color={theme.text} />
@@ -160,10 +160,10 @@ export default function RequestDetailScreen() {
 
       {/* Contrato generado */}
       {request.contract && (
-        <TouchableOpacity style={styles.contractButton} onPress={() => router.push(`/contract/${request.contract.id}`)}>
-          <Ionicons name="document-text" size={18} color="#000" />
-          <Text style={styles.contractButtonText}>Ver contrato {request.contract.code}</Text>
-          <Ionicons name="chevron-forward" size={18} color="#000" />
+        <TouchableOpacity style={[styles.contractButton, { backgroundColor: theme.success }]} onPress={() => router.push(`/contract/${request.contract.id}`)}>
+          <Ionicons name="document-text" size={18} color="#fff" />
+          <Text style={[styles.contractButtonText, { color: '#fff' }]}>Ver contrato {request.contract.code}</Text>
+          <Ionicons name="chevron-forward" size={18} color="#fff" />
         </TouchableOpacity>
       )}
 
@@ -214,54 +214,54 @@ export default function RequestDetailScreen() {
         && !request.contract
         && myProfileId !== request.requester?.id
         && ['PUBLISHED', 'IN_PROPOSALS'].includes(request.status) && (
-        <TouchableOpacity style={styles.proposalButton} onPress={() => setShowProposalForm(true)}>
-          <Ionicons name="paper-plane" size={18} color="#000" />
-          <Text style={styles.proposalButtonText}>Enviar propuesta</Text>
+        <TouchableOpacity style={[styles.proposalButton, { backgroundColor: theme.accent }]} onPress={() => setShowProposalForm(true)}>
+          <Ionicons name="paper-plane" size={18} color={theme.accentText} />
+          <Text style={[styles.proposalButtonText, { color: theme.accentText }]}>Enviar propuesta</Text>
         </TouchableOpacity>
       )}
 
       {/* Formulario de propuesta */}
       {showProposalForm && (
-        <View style={styles.formSection}>
-          <Text style={styles.formTitle}>Tu propuesta</Text>
+        <View style={[styles.formSection, glass.card, { borderColor: theme.accent }]}>
+          <Text style={[styles.formTitle, { color: theme.text }]}>Tu propuesta</Text>
 
-          <Text style={styles.label}>Precio (COP) *</Text>
+          <Text style={[styles.label, { color: theme.textMuted }]}>Precio (COP) *</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: theme.inputBg, color: theme.inputText, borderColor: theme.border }]}
             value={price}
             onChangeText={setPrice}
             placeholder="Ej: 12000"
-            placeholderTextColor="#555"
+            placeholderTextColor={theme.inputPlaceholder}
             keyboardType="numeric"
           />
 
-          <Text style={styles.label}>Descripcion de tu propuesta *</Text>
+          <Text style={[styles.label, { color: theme.textMuted }]}>Descripcion de tu propuesta *</Text>
           <TextInput
-            style={[styles.input, styles.textArea]}
+            style={[styles.input, styles.textArea, { backgroundColor: theme.inputBg, color: theme.inputText, borderColor: theme.border }]}
             value={description}
             onChangeText={setDescription}
             placeholder="Explica por que eres la mejor opcion..."
-            placeholderTextColor="#555"
+            placeholderTextColor={theme.inputPlaceholder}
             multiline
             numberOfLines={3}
             textAlignVertical="top"
           />
 
-          <Text style={styles.label}>Tiempo estimado</Text>
+          <Text style={[styles.label, { color: theme.textMuted }]}>Tiempo estimado</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: theme.inputBg, color: theme.inputText, borderColor: theme.border }]}
             value={estimatedTime}
             onChangeText={setEstimatedTime}
             placeholder="Ej: 45 minutos"
-            placeholderTextColor="#555"
+            placeholderTextColor={theme.inputPlaceholder}
           />
 
           <View style={styles.formActions}>
-            <TouchableOpacity style={styles.cancelButton} onPress={() => setShowProposalForm(false)}>
-              <Text style={styles.cancelButtonText}>Cancelar</Text>
+            <TouchableOpacity style={[styles.cancelButton, { borderColor: theme.border }]} onPress={() => setShowProposalForm(false)}>
+              <Text style={[styles.cancelButtonText, { color: theme.textMuted }]}>Cancelar</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.submitButton} onPress={submitProposal} disabled={submitting}>
-              <Text style={styles.submitButtonText}>{submitting ? 'Enviando...' : 'Enviar'}</Text>
+            <TouchableOpacity style={[styles.submitButton, { backgroundColor: theme.accent }]} onPress={submitProposal} disabled={submitting}>
+              <Text style={[styles.submitButtonText, { color: theme.accentText }]}>{submitting ? 'Enviando...' : 'Enviar'}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -271,60 +271,60 @@ export default function RequestDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
+  container: { flex: 1 },
   content: { padding: 20, paddingTop: 50 },
-  loadingText: { color: '#888', textAlign: 'center', marginTop: 100 },
+  loadingText: { textAlign: 'center', marginTop: 100 },
   backButton: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 20 },
-  backText: { color: '#fff', fontSize: 15, fontWeight: '600' },
-  card: { backgroundColor: '#111', borderRadius: 16, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: '#222' },
+  backText: { fontSize: 15, fontWeight: '600' },
+  card: { borderRadius: 16, padding: 20, marginBottom: 20 },
   categoryRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
-  categoryBadge: { backgroundColor: '#222', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  categoryText: { color: '#aaa', fontSize: 12, fontWeight: '600' },
-  urgentBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#ff4444', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  categoryBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  categoryText: { fontSize: 12, fontWeight: '600' },
+  urgentBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#dc2626', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   urgentText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  title: { fontSize: 20, fontWeight: '800', color: '#fff', marginBottom: 10 },
-  description: { fontSize: 15, color: '#ccc', lineHeight: 22, marginBottom: 16 },
+  title: { fontSize: 20, fontWeight: '800', marginBottom: 10 },
+  description: { fontSize: 15, lineHeight: 22, marginBottom: 16 },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  infoText: { color: '#888', fontSize: 14 },
-  budgetText: { color: '#4ecdc4', fontSize: 16, fontWeight: '700' },
-  requesterRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#222' },
-  avatarSmall: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#222', justifyContent: 'center', alignItems: 'center' },
-  requesterName: { color: '#fff', fontSize: 14, fontWeight: '500' },
+  infoText: { fontSize: 14 },
+  budgetText: { fontSize: 16, fontWeight: '700' },
+  requesterRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1 },
+  avatarSmall: { width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+  requesterName: { fontSize: 14, fontWeight: '500' },
   rating: { color: '#f39c12', fontSize: 13 },
   // Proposals
   section: { marginBottom: 20 },
-  sectionTitle: { color: '#fff', fontSize: 16, fontWeight: '700', marginBottom: 12 },
-  proposalCard: { backgroundColor: '#111', borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#222' },
+  sectionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 12 },
+  proposalCard: { borderRadius: 12, padding: 14, marginBottom: 10 },
   proposalHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  providerName: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  proposalPrice: { color: '#4ecdc4', fontSize: 16, fontWeight: '800' },
-  proposalDesc: { color: '#aaa', fontSize: 13, marginBottom: 4 },
-  proposalTime: { color: '#888', fontSize: 12 },
+  providerName: { fontSize: 14, fontWeight: '600' },
+  proposalPrice: { fontSize: 16, fontWeight: '800' },
+  proposalDesc: { fontSize: 13, marginBottom: 4 },
+  proposalTime: { fontSize: 12 },
   providerRating: { color: '#f39c12', fontSize: 12, marginTop: 4 },
   // CTA
-  proposalButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#4ecdc4', borderRadius: 14, padding: 16, marginBottom: 20 },
-  proposalButtonText: { color: '#000', fontSize: 16, fontWeight: '800' },
-  contractButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#2ecc71', borderRadius: 14, padding: 16, marginBottom: 20 },
-  contractButtonText: { color: '#000', fontSize: 15, fontWeight: '800' },
+  proposalButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, padding: 16, marginBottom: 20 },
+  proposalButtonText: { fontSize: 16, fontWeight: '800' },
+  contractButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, padding: 16, marginBottom: 20 },
+  contractButtonText: { fontSize: 15, fontWeight: '800' },
   // Form
-  formSection: { backgroundColor: '#111', borderRadius: 16, padding: 18, marginBottom: 20, borderWidth: 1, borderColor: '#4ecdc4' },
-  formTitle: { color: '#fff', fontSize: 17, fontWeight: '800', marginBottom: 14 },
-  label: { color: '#aaa', fontSize: 12, fontWeight: '600', marginBottom: 6, marginTop: 10 },
-  input: { backgroundColor: '#1a1a1a', borderRadius: 10, padding: 12, color: '#fff', fontSize: 15, borderWidth: 1, borderColor: '#333' },
+  formSection: { borderRadius: 16, padding: 18, marginBottom: 20, borderWidth: 1 },
+  formTitle: { fontSize: 17, fontWeight: '800', marginBottom: 14 },
+  label: { fontSize: 12, fontWeight: '600', marginBottom: 6, marginTop: 10 },
+  input: { borderRadius: 10, padding: 12, fontSize: 15, borderWidth: 1 },
   textArea: { height: 80 },
   formActions: { flexDirection: 'row', gap: 12, marginTop: 16 },
-  cancelButton: { flex: 1, padding: 14, borderRadius: 10, borderWidth: 1, borderColor: '#333', alignItems: 'center' },
-  cancelButtonText: { color: '#888', fontSize: 14, fontWeight: '600' },
-  submitButton: { flex: 2, padding: 14, borderRadius: 10, backgroundColor: '#4ecdc4', alignItems: 'center' },
-  submitButtonText: { color: '#000', fontSize: 14, fontWeight: '800' },
+  cancelButton: { flex: 1, padding: 14, borderRadius: 10, borderWidth: 1, alignItems: 'center' },
+  cancelButtonText: { fontSize: 14, fontWeight: '600' },
+  submitButton: { flex: 2, padding: 14, borderRadius: 10, alignItems: 'center' },
+  submitButtonText: { fontSize: 14, fontWeight: '800' },
   // Accept/Reject
   proposalActions: { flexDirection: 'row', gap: 10, marginTop: 10 },
-  rejectBtn: { flex: 1, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#ff4444', alignItems: 'center' },
-  rejectBtnText: { color: '#ff4444', fontSize: 13, fontWeight: '700' },
-  acceptBtn: { flex: 2, padding: 10, borderRadius: 8, backgroundColor: '#4ecdc4', alignItems: 'center' },
-  acceptBtnText: { color: '#000', fontSize: 13, fontWeight: '800' },
+  rejectBtn: { flex: 1, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#dc2626', alignItems: 'center' },
+  rejectBtnText: { color: '#dc2626', fontSize: 13, fontWeight: '700' },
+  acceptBtn: { flex: 2, padding: 10, borderRadius: 8, alignItems: 'center' },
+  acceptBtnText: { fontSize: 13, fontWeight: '800' },
   acceptedBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
-  acceptedText: { color: '#4ecdc4', fontSize: 12, fontWeight: '700' },
+  acceptedText: { fontSize: 12, fontWeight: '700' },
   rejectedBadge: { marginTop: 8 },
-  rejectedText: { color: '#ff4444', fontSize: 12, fontWeight: '600' },
+  rejectedText: { color: '#dc2626', fontSize: 12, fontWeight: '600' },
 });
