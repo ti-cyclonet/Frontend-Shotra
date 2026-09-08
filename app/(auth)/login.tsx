@@ -19,6 +19,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [focusField, setFocusField] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Animaciones de entrada
   const logoAnim = useRef(new Animated.Value(0)).current;
@@ -140,6 +141,8 @@ export default function LoginScreen() {
               onBlur={() => setFocusField(null)}
               keyboardType="email-address"
               autoCapitalize="none"
+              returnKeyType="next"
+              onSubmitEditing={handleLogin}
             />
           </View>
 
@@ -160,8 +163,21 @@ export default function LoginScreen() {
               onChangeText={setPassword}
               onFocus={() => setFocusField('pass')}
               onBlur={() => setFocusField(null)}
-              secureTextEntry
+              secureTextEntry={!showPassword}
+              returnKeyType="go"
+              onSubmitEditing={handleLogin}
             />
+            <TouchableOpacity
+              onPress={() => setShowPassword((v) => !v)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityLabel={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            >
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color={focusField === 'pass' ? theme.accent : theme.inputPlaceholder}
+              />
+            </TouchableOpacity>
           </View>
 
           {error ? (

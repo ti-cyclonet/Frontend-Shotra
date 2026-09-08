@@ -64,28 +64,33 @@ export const THEMES: Record<ThemeKey, Theme> = {
   black: {
     key: 'black',
     label: 'Negro',
-    background: '#000000',
-    surface: '#111111',
-    surfaceAlt: '#1a1a1a',
-    border: '#262626',
-    text: '#ffffff',
-    textMuted: '#aaaaaa',
-    inputBg: '#1a1a1a',
-    inputText: '#ffffff',
-    inputPlaceholder: '#777777',
+    // Paleta estilo "GitHub dark": canvas casi negro con tinte azulado y
+    // superficies elevadas en grises azulados progresivos (profundidad por
+    // elevacion), con bordes definidos para esa "iluminacion" de contorno.
+    background: '#0d1117',   // canvas
+    surface: '#161b22',      // tarjetas / superficies elevadas
+    surfaceAlt: '#21262d',   // inputs / superficies secundarias
+    border: '#30363d',       // borde sutil pero visible
+    text: '#e6edf3',
+    textMuted: '#8b949e',
+    inputBg: '#0d1117',
+    inputText: '#e6edf3',
+    inputPlaceholder: '#6e7681',
     accent: '#d4d4d4',
-    accentText: '#111111',
+    accentText: '#161b22',
     accentDark: '#a3a3a3',
     accentSoft: 'rgba(212,212,212,0.14)',
-    danger: '#ff6b6b',
-    success: '#7ee0d8',
-    warning: '#ffd166',
-    tabBar: '#000000',
-    swatch: '#000000',
-    glass: 'rgba(255,255,255,0.045)',
-    glassStrong: 'rgba(255,255,255,0.07)',
-    glassBorder: 'rgba(255,255,255,0.1)',
-    glassHighlight: 'rgba(255,255,255,0.16)',
+    danger: '#f85149',
+    success: '#3fb950',
+    warning: '#d29922',
+    tabBar: '#0d1117',
+    swatch: '#0d1117',
+    // Glass: leve levantado sobre el canvas + highlight superior mas marcado
+    // (borde superior "iluminado") para reforzar la sensacion de elevacion.
+    glass: 'rgba(255,255,255,0.04)',
+    glassStrong: 'rgba(255,255,255,0.08)',
+    glassBorder: 'rgba(240,246,252,0.12)',
+    glassHighlight: 'rgba(240,246,252,0.22)',
   },
   crimson: {
     key: 'crimson',

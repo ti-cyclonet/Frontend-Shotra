@@ -37,6 +37,13 @@ export function PressableCard({
       ? ({ backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' } as any)
       : {};
 
+  // Tema Negro (GitHub-dark): superficie solida elevada + sombra, en vez del
+  // glass translucido (reservado para Carmesi).
+  const isDarkSolid = themeKey === 'black';
+  const bg = isDarkSolid
+    ? (strong ? theme.surfaceAlt : theme.surface)
+    : (strong ? theme.glassStrong : theme.glass);
+
   return (
     <AnimatedPressable
       {...props}
@@ -50,14 +57,14 @@ export function PressableCard({
       }}
       style={[
         {
-          backgroundColor: strong ? theme.glassStrong : theme.glass,
+          backgroundColor: bg,
           borderWidth: 1,
           borderColor: theme.glassBorder,
           borderRadius: rounded,
           padding: padding === false ? 0 : padding,
           ...(isLight ? {} : { borderTopColor: theme.glassHighlight }),
         },
-        isLight ? shadow.card : glassBlur,
+        isLight || isDarkSolid ? shadow.card : glassBlur,
         animatedStyle,
         style,
       ]}
