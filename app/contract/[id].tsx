@@ -179,10 +179,10 @@ export default function ContractDetailScreen() {
   };
 
   if (loading) {
-    return <View style={styles.container}><Text style={styles.loadingText}>Cargando...</Text></View>;
+    return <View style={[styles.container, { backgroundColor: theme.background }]}><Text style={[styles.loadingText, { color: theme.textMuted }]}>Cargando...</Text></View>;
   }
   if (!contract) {
-    return <View style={styles.container}><Text style={styles.loadingText}>Contrato no encontrado</Text></View>;
+    return <View style={[styles.container, { backgroundColor: theme.background }]}><Text style={[styles.loadingText, { color: theme.textMuted }]}>Contrato no encontrado</Text></View>;
   }
 
   const isRequester = myProfileId === contract.requesterId;
@@ -212,7 +212,7 @@ export default function ContractDetailScreen() {
   const payMethodLabel = (m: string) => PAY_METHODS.find((p) => p.key === m)?.label || m;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={styles.content}>
       <TouchableOpacity style={styles.backButton} onPress={() => router.canGoBack() ? router.back() : router.push('/(tabs)/feed')}>
         <Ionicons name="arrow-back" size={22} color={theme.text} />
         <Text style={[styles.backText, { color: theme.text }]}>Volver</Text>
@@ -274,27 +274,27 @@ export default function ContractDetailScreen() {
       {(isRequester || isProvider) && (
         <View style={styles.actions}>
           {contract.status === 'PENDING' && !iSigned && (
-            <TouchableOpacity style={styles.primaryBtn} onPress={sign} disabled={busy}>
-              <Ionicons name="create" size={18} color="#000" />
-              <Text style={styles.primaryBtnText}>{busy ? 'Firmando...' : 'Firmar contrato'}</Text>
+            <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: theme.accent }]} onPress={sign} disabled={busy}>
+              <Ionicons name="create" size={18} color={theme.accentText} />
+              <Text style={[styles.primaryBtnText, { color: theme.accentText }]}>{busy ? 'Firmando...' : 'Firmar contrato'}</Text>
             </TouchableOpacity>
           )}
           {contract.status === 'PENDING' && iSigned && !bothSigned && (
-            <View style={styles.infoBox}>
-              <Text style={styles.infoText}>Ya firmaste. Esperando la firma de la otra parte.</Text>
+            <View style={[styles.infoBox, glass.card]}>
+              <Text style={[styles.infoText, { color: theme.textMuted }]}>Ya firmaste. Esperando la firma de la otra parte.</Text>
             </View>
           )}
           {/* Ofertante activo: puede marcar entregado */}
           {isActive && isProvider && (
-            <TouchableOpacity style={styles.completeBtn} onPress={markDelivered} disabled={busy}>
-              <Ionicons name="checkmark-done" size={18} color="#000" />
-              <Text style={styles.primaryBtnText}>{busy ? 'Procesando...' : 'Marcar como entregado'}</Text>
+            <TouchableOpacity style={[styles.completeBtn, { backgroundColor: theme.success }]} onPress={markDelivered} disabled={busy}>
+              <Ionicons name="checkmark-done" size={18} color="#fff" />
+              <Text style={[styles.primaryBtnText, { color: '#fff' }]}>{busy ? 'Procesando...' : 'Marcar como entregado'}</Text>
             </TouchableOpacity>
           )}
           {/* Ofertante ya entregó, espera confirmación */}
           {isPendingConfirmation && isProvider && (
-            <View style={styles.infoBox}>
-              <Text style={styles.infoText}>Marcaste el servicio como entregado. Esperando que el solicitante confirme la recepción y el pago.</Text>
+            <View style={[styles.infoBox, glass.card]}>
+              <Text style={[styles.infoText, { color: theme.textMuted }]}>Marcaste el servicio como entregado. Esperando que el solicitante confirme la recepción y el pago.</Text>
             </View>
           )}
           {['COMPLETED', 'EVALUATED'].includes(contract.status) && (
@@ -369,9 +369,9 @@ export default function ContractDetailScreen() {
             textAlignVertical="top"
           />
 
-          <TouchableOpacity style={[styles.completeBtn, { marginTop: 16 }]} onPress={confirmReceipt} disabled={busy}>
-            <Ionicons name="checkmark-circle" size={18} color="#000" />
-            <Text style={styles.primaryBtnText}>{busy ? 'Confirmando...' : 'Confirmar recepción y pago'}</Text>
+          <TouchableOpacity style={[styles.completeBtn, { backgroundColor: theme.success, marginTop: 16 }]} onPress={confirmReceipt} disabled={busy}>
+            <Ionicons name="checkmark-circle" size={18} color="#fff" />
+            <Text style={[styles.primaryBtnText, { color: '#fff' }]}>{busy ? 'Confirmando...' : 'Confirmar recepción y pago'}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -405,30 +405,30 @@ export default function ContractDetailScreen() {
           <Text style={[styles.ratingLabel, { color: theme.textMuted }]}>Valoracion general *</Text>
           <StarRating value={score} onChange={setScore} />
 
-          <Text style={styles.ratingLabel}>Calidad del servicio</Text>
+          <Text style={[styles.ratingLabel, { color: theme.textMuted }]}>Calidad del servicio</Text>
           <StarRating value={quality} onChange={setQuality} size={24} />
 
-          <Text style={styles.ratingLabel}>Puntualidad</Text>
+          <Text style={[styles.ratingLabel, { color: theme.textMuted }]}>Puntualidad</Text>
           <StarRating value={punctuality} onChange={setPunctuality} size={24} />
 
-          <Text style={styles.ratingLabel}>Comunicacion</Text>
+          <Text style={[styles.ratingLabel, { color: theme.textMuted }]}>Comunicacion</Text>
           <StarRating value={communication} onChange={setCommunication} size={24} />
 
-          <Text style={styles.ratingLabel}>Comentario</Text>
+          <Text style={[styles.ratingLabel, { color: theme.textMuted }]}>Comentario</Text>
           <TextInput
-            style={styles.textArea}
+            style={[styles.textArea, { color: theme.text, backgroundColor: theme.inputBg, borderColor: theme.border }]}
             value={comment}
             onChangeText={setComment}
             placeholder="Cuentanos como fue tu experiencia..."
-            placeholderTextColor="#555"
+            placeholderTextColor={theme.inputPlaceholder}
             multiline
             numberOfLines={3}
             textAlignVertical="top"
           />
 
-          <TouchableOpacity style={styles.rateBtn} onPress={submitRating} disabled={busy}>
-            <Ionicons name="star" size={18} color="#000" />
-            <Text style={styles.primaryBtnText}>{busy ? 'Enviando...' : 'Enviar evaluacion'}</Text>
+          <TouchableOpacity style={[styles.rateBtn, { backgroundColor: theme.warning }]} onPress={submitRating} disabled={busy}>
+            <Ionicons name="star" size={18} color="#fff" />
+            <Text style={[styles.primaryBtnText, { color: '#fff' }]}>{busy ? 'Enviando...' : 'Enviar evaluacion'}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -445,41 +445,41 @@ export default function ContractDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
+  container: { flex: 1 },
   content: { padding: 20, paddingTop: 50 },
-  loadingText: { color: '#888', textAlign: 'center', marginTop: 100 },
+  loadingText: { textAlign: 'center', marginTop: 100 },
   backButton: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 20 },
   backText: { color: '#fff', fontSize: 15, fontWeight: '600' },
-  card: { backgroundColor: '#111', borderRadius: 16, padding: 18, marginBottom: 16, borderWidth: 1, borderColor: '#222' },
+  card: { borderRadius: 16, padding: 18, marginBottom: 16 },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  code: { color: '#4ecdc4', fontSize: 15, fontWeight: '800', letterSpacing: 0.5 },
+  code: { fontSize: 15, fontWeight: '800', letterSpacing: 0.5 },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   statusText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  title: { fontSize: 18, fontWeight: '800', color: '#fff', marginBottom: 4 },
-  category: { color: '#888', fontSize: 13, marginBottom: 12 },
+  title: { fontSize: 18, fontWeight: '800', marginBottom: 4 },
+  category: { fontSize: 13, marginBottom: 12 },
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  price: { color: '#4ecdc4', fontSize: 18, fontWeight: '800' },
-  sectionTitle: { color: '#fff', fontSize: 15, fontWeight: '700', marginBottom: 12 },
+  price: { fontSize: 18, fontWeight: '800' },
+  sectionTitle: { fontSize: 15, fontWeight: '700', marginBottom: 12 },
   partyRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  partyLabel: { color: '#777', fontSize: 12 },
-  partyName: { color: '#fff', fontSize: 15, fontWeight: '600', marginTop: 2 },
+  partyLabel: { fontSize: 12 },
+  partyName: { fontSize: 15, fontWeight: '600', marginTop: 2 },
   signedTag: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  signedText: { color: '#2ecc71', fontSize: 13, fontWeight: '700' },
-  pendingText: { color: '#f39c12', fontSize: 13, fontWeight: '600' },
-  divider: { height: 1, backgroundColor: '#222', marginVertical: 12 },
-  proposalDesc: { color: '#ccc', fontSize: 14, lineHeight: 20 },
-  proposalTime: { color: '#888', fontSize: 13, marginTop: 8 },
+  signedText: { color: '#16a34a', fontSize: 13, fontWeight: '700' },
+  pendingText: { color: '#d97706', fontSize: 13, fontWeight: '600' },
+  divider: { height: 1, marginVertical: 12 },
+  proposalDesc: { fontSize: 14, lineHeight: 20 },
+  proposalTime: { fontSize: 13, marginTop: 8 },
   actions: { marginTop: 4, marginBottom: 30 },
-  primaryBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#4ecdc4', borderRadius: 14, padding: 16 },
-  completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#2ecc71', borderRadius: 14, padding: 16 },
-  primaryBtnText: { color: '#000', fontSize: 16, fontWeight: '800' },
-  infoBox: { backgroundColor: '#1a1a1a', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#333' },
-  infoText: { color: '#aaa', fontSize: 14, textAlign: 'center' },
-  infoBoxSuccess: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#0f2419', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#2ecc71', marginBottom: 16 },
-  infoTextSuccess: { color: '#2ecc71', fontSize: 15, fontWeight: '700' },
-  ratingLabel: { color: '#aaa', fontSize: 13, fontWeight: '600', marginTop: 14, marginBottom: 8 },
-  textArea: { backgroundColor: '#1a1a1a', borderRadius: 10, padding: 12, color: '#fff', fontSize: 15, borderWidth: 1, borderColor: '#333', height: 80, marginTop: 4 },
-  rateBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#f39c12', borderRadius: 14, padding: 16, marginTop: 18 },
+  primaryBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, padding: 16 },
+  completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, padding: 16 },
+  primaryBtnText: { fontSize: 16, fontWeight: '800' },
+  infoBox: { borderRadius: 12, padding: 16 },
+  infoText: { fontSize: 14, textAlign: 'center' },
+  infoBoxSuccess: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: 'rgba(22,163,74,0.12)', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#16a34a', marginBottom: 16 },
+  infoTextSuccess: { color: '#16a34a', fontSize: 15, fontWeight: '700' },
+  ratingLabel: { fontSize: 13, fontWeight: '600', marginTop: 14, marginBottom: 8 },
+  textArea: { borderRadius: 10, padding: 12, fontSize: 15, borderWidth: 1, height: 80, marginTop: 4 },
+  rateBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, padding: 16, marginTop: 18 },
   payMethods: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
   payChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 10 },
   payChipText: { fontSize: 13, fontWeight: '600' },

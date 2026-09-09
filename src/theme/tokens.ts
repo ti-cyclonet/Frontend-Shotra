@@ -116,6 +116,7 @@ export const chipColors = {
   amber: { bg: 'rgba(217,119,6,0.16)', fg: '#b45309' },
   blue: { bg: 'rgba(37,99,235,0.14)', fg: '#2563eb' },
   teal: { bg: 'rgba(78,205,196,0.16)', fg: '#0f766e' },
+  purple: { bg: 'rgba(155,89,182,0.16)', fg: '#8e44ad' },
   neutral: { bg: 'rgba(120,120,120,0.16)', fg: '#525252' },
 } as const;
 

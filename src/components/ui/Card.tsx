@@ -27,25 +27,32 @@ export function Card({ children, strong, padding = 20, rounded = radius['2xl'], 
       ? ({ backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' } as any)
       : {};
 
+  // Tema Negro (GitHub-dark): superficies SOLIDAS elevadas + sombra sutil, en
+  // vez del glass translucido (que se usa en Carmesi). Da profundidad real.
+  const isDarkSolid = themeKey === 'black';
+  const bg = isDarkSolid
+    ? (strong ? theme.surfaceAlt : theme.surface)
+    : (strong ? theme.glassStrong : theme.glass);
+
   return (
-    <View
-      {...props}
-      style={[
-        {
-          backgroundColor: strong ? theme.glassStrong : theme.glass,
-          borderWidth: 1,
-          borderColor: theme.glassBorder,
-          borderRadius: rounded,
-          padding: padding === false ? 0 : padding,
-          ...(isLight ? {} : { borderTopColor: theme.glassHighlight }),
-        },
-        isLight ? shadow.card : glassBlur,
-        style as ViewStyle,
-      ]}
-    >
-      {children}
-    </View>
-  );
+      <View
+        {...props}
+        style={[
+          {
+            backgroundColor: bg,
+            borderWidth: 1,
+            borderColor: theme.glassBorder,
+            borderRadius: rounded,
+            padding: padding === false ? 0 : padding,
+            ...(isLight ? {} : { borderTopColor: theme.glassHighlight }),
+          },
+          isLight || isDarkSolid ? shadow.card : glassBlur,
+          style as ViewStyle,
+        ]}
+      >
+        {children}
+      </View>
+    );
 }
 
 /** Encabezado de tarjeta con separacion estandar. */

@@ -1,8 +1,8 @@
 import { View, FlatList, StyleSheet, Pressable, RefreshControl } from 'react-native';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSpring, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { api } from '../../src/services/api';
 import { useNotifications } from '../../src/context/NotificationsContext';
 import { useTheme } from '../../src/context/ThemeProvider';
@@ -95,6 +95,8 @@ export default function FeedScreen() {
   const { unread } = useNotifications();
   const { theme } = useTheme();
 
+  const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const loadFeed = useCallback(async () => {
     try {
       const data = await api.get<ServiceRequest[]>('/requests');
@@ -108,6 +110,22 @@ export default function FeedScreen() {
   }, []);
 
   useEffect(() => { loadFeed(); }, [loadFeed]);
+
+  // Auto-refresco: mientras la pantalla está enfocada, consulta el feed cada 5s
+  // de forma silenciosa (sin spinner) para reflejar solicitudes nuevas casi en
+  // tiempo real. Se detiene al salir de la pantalla para no gastar recursos.
+  useFocusEffect(
+    useCallback(() => {
+      loadFeed(); // refresco inmediato al entrar
+      pollTimer.current = setInterval(() => { loadFeed(); }, 5000);
+      return () => {
+        if (pollTimer.current) {
+          clearInterval(pollTimer.current);
+          pollTimer.current = null;
+        }
+      };
+    }, [loadFeed]),
+  );
 
   const onRefresh = () => { setRefreshing(true); loadFeed(); };
 

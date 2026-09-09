@@ -37,7 +37,7 @@ export default function NotificationsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.canGoBack() ? router.back() : router.push('/(tabs)/feed')}>
           <Ionicons name="arrow-back" size={22} color={theme.text} />
@@ -80,11 +80,11 @@ export default function NotificationsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
+  container: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingTop: 52 },
   backButton: { padding: 4 },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: '#fff' },
-  markAll: { color: '#4ecdc4', fontSize: 13, fontWeight: '700' },
+  headerTitle: { fontSize: 20, fontWeight: '800' },
+  markAll: { fontSize: 13, fontWeight: '700' },
   list: { padding: 16, paddingTop: 4 },
   card: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, padding: 14, marginBottom: 10 },
   iconWrap: { width: 38, height: 38, borderRadius: 19, justifyContent: 'center', alignItems: 'center' },

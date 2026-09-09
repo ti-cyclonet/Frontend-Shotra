@@ -74,7 +74,7 @@ export default function AccountStatementScreen() {
   const progress = Math.min(1, threshold > 0 ? accrued / threshold : 0);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.canGoBack() ? router.back() : router.push('/(tabs)/profile')}>
           <Ionicons name="arrow-back" size={22} color={theme.text} />
@@ -174,7 +174,7 @@ export default function AccountStatementScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
+  container: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingTop: 52 },
   backButton: { padding: 4 },
   headerTitle: { fontSize: 20, fontWeight: '800' },

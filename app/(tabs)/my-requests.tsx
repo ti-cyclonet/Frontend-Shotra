@@ -3,10 +3,14 @@ import { useState, useCallback } from 'react';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router, useFocusEffect } from 'expo-router';
 import { api } from '../../src/services/api';
+import { confirmDialog, alertDialog } from '../../src/services/dialog';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { Text, PressableCard, Badge, IconChip, Button, spacing, radius, typography } from '../../src/components/ui';
 
 type Tab = 'requests' | 'proposals';
+
+// Estados en los que una solicitud AÚN puede cancelarse (coincide con el backend).
+const CANCELABLE = ['PUBLISHED', 'IN_PROPOSALS', 'DRAFT'];
 
 // Mapea el estado a un color de chip semantico del design system
 const statusChip: Record<string, 'teal' | 'amber' | 'green' | 'blue' | 'red' | 'neutral'> = {
@@ -21,6 +25,29 @@ const statusLabel: Record<string, string> = {
   COMPLETED: 'Completada', CANCELLED: 'Cancelada',
 };
 
+// Estado del CONTRATO → chip + etiqueta (para reflejar el ciclo real de la
+// propuesta aceptada, que el proposal.status no refleja porque se queda en ACCEPTED).
+const contractChip: Record<string, 'teal' | 'amber' | 'green' | 'blue' | 'red' | 'purple' | 'neutral'> = {
+  PENDING: 'amber', SIGNED: 'blue', IN_PROGRESS: 'blue',
+  PENDING_CONFIRMATION: 'amber', COMPLETED: 'green', EVALUATED: 'purple',
+  CANCELLED: 'red', DISPUTED: 'red',
+};
+const contractLabel: Record<string, string> = {
+  PENDING: 'Pendiente de firma', SIGNED: 'En curso', IN_PROGRESS: 'En curso',
+  PENDING_CONFIRMATION: 'Por confirmar', COMPLETED: 'Completada', EVALUATED: 'Finalizada',
+  CANCELLED: 'Cancelada', DISPUTED: 'En disputa',
+};
+
+/** Estado a mostrar para una propuesta: si fue aceptada y ya hay contrato, se
+ *  usa el estado del CONTRATO (más real); si no, el de la propuesta. */
+function proposalDisplayStatus(item: any): { label: string; chip: 'teal' | 'amber' | 'green' | 'blue' | 'red' | 'purple' | 'neutral' } {
+  const cStatus = item?.contract?.status;
+  if (item?.status === 'ACCEPTED' && cStatus && contractLabel[cStatus]) {
+    return { label: contractLabel[cStatus], chip: contractChip[cStatus] || 'neutral' };
+  }
+  return { label: statusLabel[item.status] || item.status, chip: statusChip[item.status] || 'neutral' };
+}
+
 export default function ActivityScreen() {
   const { theme } = useTheme();
   const [activeTab, setActiveTab] = useState<Tab>('requests');
@@ -32,7 +59,33 @@ export default function ActivityScreen() {
     api.get('/proposals/mine').then(setProposals).catch(() => {});
   }, []);
 
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  // Auto-refresco cada 5s mientras la pantalla está enfocada (para ver nuevas
+  // propuestas/estados casi en tiempo real). Se detiene al salir.
+  useFocusEffect(
+    useCallback(() => {
+      load();
+      const t = setInterval(() => { load(); }, 5000);
+      return () => clearInterval(t);
+    }, [load]),
+  );
+
+  const cancelRequest = useCallback(async (item: any) => {
+    const ok = await confirmDialog(
+      'Cancelar solicitud',
+      `¿Seguro que quieres cancelar "${item.title}"? Dejará de recibir propuestas.`,
+      'Sí, cancelar',
+      'No',
+      'danger',
+    );
+    if (!ok) return;
+    try {
+      await api.patch(`/requests/${item.id}/cancel`);
+      await alertDialog('Solicitud cancelada', 'Tu solicitud fue cancelada.', 'success');
+      load();
+    } catch (e: any) {
+      await alertDialog('No se pudo cancelar', e?.message || 'Intenta de nuevo.', 'danger');
+    }
+  }, [load]);
 
   const renderRequest = ({ item, index }: { item: any; index: number }) => (
     <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 55).springify().damping(16)}>
@@ -46,6 +99,16 @@ export default function ActivityScreen() {
           <IconChip icon="people-outline" color="red" size={30} />
           <Text variant="captionStrong" color={theme.accent}>{item._count?.proposals || 0} propuestas recibidas</Text>
         </View>
+        {CANCELABLE.includes(item.status) && (
+          <Button
+            label="Cancelar solicitud"
+            variant="outline"
+            size="sm"
+            icon="close-circle-outline"
+            onPress={() => cancelRequest(item)}
+            style={{ marginTop: spacing[3] }}
+          />
+        )}
       </PressableCard>
     </Animated.View>
   );
@@ -64,7 +127,7 @@ export default function ActivityScreen() {
       >
         <View style={styles.row}>
           <Text variant="cardTitle" style={{ flex: 1, marginRight: spacing[2] }} numberOfLines={1}>{item.request?.title}</Text>
-          <Badge label={statusLabel[item.status] || item.status} color={statusChip[item.status] || 'neutral'} />
+          <Badge label={proposalDisplayStatus(item).label} color={proposalDisplayStatus(item).chip} />
         </View>
         <Text variant="caption" muted style={{ marginTop: 4 }}>{item.request?.category?.name}</Text>
         <View style={[styles.footerRow, { borderTopColor: theme.glassBorder }]}>

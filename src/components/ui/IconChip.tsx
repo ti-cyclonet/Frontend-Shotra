@@ -1,6 +1,7 @@
 import { View, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { radius, chipColors, ChipColor } from '../../theme/tokens';
+import { useTheme } from '../../context/ThemeProvider';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
@@ -35,7 +36,16 @@ export function IconChip({
   rounded = radius.md,
   style,
 }: IconChipProps) {
-  const palette = chipColors[color];
+  const { themeKey } = useTheme();
+
+  // En el tema Carmesi las tarjetas son paneles oscuros; el tinte rojo de marca
+  // no contrasta. Para el color por defecto ('red') se usa un chip claro
+  // (icono blanco sobre tinte claro translucido) que resalta sobre el panel
+  // oscuro. Los demas colores semanticos (green/blue/etc.) se dejan igual.
+  const crimsonRedChip = { bg: 'rgba(255,255,255,0.14)', fg: '#ffe0e0' };
+  const palette =
+    themeKey === 'crimson' && color === 'red' ? crimsonRedChip : chipColors[color];
+
   const background = bg ?? palette.bg;
   const foreground = fg ?? palette.fg;
   const glyph = iconSize ?? Math.round(size * 0.55);

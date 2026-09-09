@@ -1,6 +1,6 @@
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView,
-  Platform, Image, Animated, ActivityIndicator, Pressable,
+  Platform, Image, Animated, ActivityIndicator, Pressable, ScrollView,
 } from 'react-native';
 import { useState, useRef, useEffect } from 'react';
 import { router } from 'expo-router';
@@ -19,6 +19,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [focusField, setFocusField] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Animaciones de entrada
   const logoAnim = useRef(new Animated.Value(0)).current;
@@ -75,29 +76,52 @@ export default function LoginScreen() {
   const themeTranslate = themeAnim.interpolate({ inputRange: [0, 1], outputRange: [30, 0] });
   const shakeX = shake.interpolate({ inputRange: [-1, 1], outputRange: [-8, 8] });
 
+  // Logo sobre la banda de color de marca, elegido por contraste con la banda:
+  //   Carmesi (banda negra) -> logo rojo
+  //   Claro / Negro         -> logo gris
+  const logoSource = themeKey === 'crimson'
+    ? require('../../assets/logo_rojo.png')
+    : require('../../assets/logo_gris.png');
+
+  // Color de la banda superior (estilo Kiri): el acento de marca del tema.
+  const bandColor = theme.accent;
+  const onBand = theme.accentText;
+
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: theme.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={styles.content}>
-        <View style={styles.logoZone}>
-          <Animated.Image
-            source={themeKey === 'black'
-              ? require('../../assets/logo_rojo.png')
-              : require('../../assets/logo_gris.png')}
-            style={[styles.logo, { opacity: logoAnim, transform: [{ translateY: logoTranslate }, { scale: logoScale }] }]}
-            resizeMode="contain"
-          />
-        </View>
-
-        <Animated.Text style={[styles.tagline, { color: theme.textMuted, opacity: logoAnim }]}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+      {/* Cabecera con banda de color a todo el ancho (estilo Kiri) */}
+      <Animated.View
+        style={[
+          styles.headerBand,
+          { backgroundColor: bandColor, opacity: logoAnim, transform: [{ translateY: logoTranslate }] },
+        ]}
+      >
+        <Animated.Image
+          source={logoSource}
+          style={[styles.logoImg, { transform: [{ scale: logoScale }] }]}
+          resizeMode="contain"
+        />
+        <Text style={[styles.brandTagline, { color: onBand, opacity: 0.9 }]}>
           Conectamos soluciones con quienes las necesitan
-        </Animated.Text>
+        </Text>
+      </Animated.View>
 
+      <View style={styles.content}>
         <Animated.View
           style={[styles.form, { opacity: formAnim, transform: [{ translateY: formTranslate }, { translateX: shakeX }] }]}
         >
+          <Text style={[styles.welcomeTitle, { color: theme.text }]}>Bienvenido de vuelta</Text>
+          <Text style={[styles.welcomeSubtitle, { color: theme.textMuted }]}>Inicia sesión para continuar</Text>
+
           {/* Campo correo */}
           <View
             style={[
@@ -117,6 +141,8 @@ export default function LoginScreen() {
               onBlur={() => setFocusField(null)}
               keyboardType="email-address"
               autoCapitalize="none"
+              returnKeyType="next"
+              onSubmitEditing={handleLogin}
             />
           </View>
 
@@ -137,8 +163,21 @@ export default function LoginScreen() {
               onChangeText={setPassword}
               onFocus={() => setFocusField('pass')}
               onBlur={() => setFocusField(null)}
-              secureTextEntry
+              secureTextEntry={!showPassword}
+              returnKeyType="go"
+              onSubmitEditing={handleLogin}
             />
+            <TouchableOpacity
+              onPress={() => setShowPassword((v) => !v)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityLabel={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            >
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color={focusField === 'pass' ? theme.accent : theme.inputPlaceholder}
+              />
+            </TouchableOpacity>
           </View>
 
           {error ? (
@@ -191,6 +230,7 @@ export default function LoginScreen() {
 
         <Text style={[styles.footer, { color: theme.textMuted }]}>Powered by CycloNet S.A.S.</Text>
       </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -224,7 +264,7 @@ function ThemeSwatch({
         ]}
       >
         <Animated.View style={{ opacity: check, transform: [{ scale: check }] }}>
-          <Ionicons name="checkmark-circle" size={22} color="#fff" />
+          <Ionicons name="checkmark-circle" size={22} color={accent} />
         </Animated.View>
       </Animated.View>
       <Text style={[styles.swatchLabel, { color: selected ? text : textMuted, fontWeight: selected ? '800' : '600' }]}>
@@ -236,10 +276,23 @@ function ThemeSwatch({
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  logoZone: { alignItems: 'center', justifyContent: 'center', width: '100%' },
-  logo: { width: '100%', maxWidth: 320, height: 112 },
-  tagline: { fontSize: 14, marginTop: 16, marginBottom: 40, textAlign: 'center' },
+  // flexGrow: 1 permite que el contenido se centre cuando sobra espacio, pero
+  // habilita el scroll cuando el teclado reduce el area visible.
+  scrollContent: { flexGrow: 1 },
+  content: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, paddingBottom: 24, paddingTop: 48 },
+  // Cabecera estilo Kiri: banda de color a TODO el ancho, bordes rectos.
+  // Logo grande centrado + frase, sin texto de marca.
+  headerBand: {
+    width: '100%',
+    paddingTop: 56,
+    paddingBottom: 24,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+  },
+  logoImg: { width: 240, height: 108, marginBottom: 2 },
+  brandTagline: { fontSize: 14, textAlign: 'center', maxWidth: 300 },
+  welcomeTitle: { fontSize: 24, fontWeight: '800', marginBottom: 2, marginTop: 24 },
+  welcomeSubtitle: { fontSize: 14, marginBottom: 22 },
   form: { width: '100%', maxWidth: 340 },
   inputWrap: {
     flexDirection: 'row',
