@@ -1,4 +1,5 @@
-import { View, StyleSheet, TouchableOpacity, Switch, ScrollView, Modal, FlatList } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Switch, ScrollView, Modal, FlatList, Image, ActivityIndicator } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useState, useEffect } from 'react';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +16,7 @@ export default function ProfileScreen() {
   const [showAddSkill, setShowAddSkill] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
   const [addingSkill, setAddingSkill] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -56,6 +58,36 @@ export default function ProfileScreen() {
     }
   };
 
+  // Cambiar foto de perfil. Sube al endpoint CENTRAL de Authoriza (la foto vive
+  // allí y se refleja en todas las apps). Tras subir, recarga el perfil.
+  const changeAvatar = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (result.canceled || !result.assets?.length) return;
+      const asset = result.assets[0];
+      const name = asset.fileName || `avatar_${Date.now()}.jpg`;
+      const type = asset.mimeType || 'image/jpeg';
+
+      setUploadingAvatar(true);
+      const res = await api.uploadAvatar({ uri: asset.uri, name, type });
+      // Reflejar de inmediato con la URL que devuelve la subida (fuente de verdad).
+      // OJO: NO llamar loadProfile() aquí — /profiles/me sincroniza el avatar desde
+      // el TOKEN de Shotra, que aún es el viejo (sin la foto recién subida), así que
+      // sobrescribiría la URL buena con una vacía. En el próximo login/switch-app el
+      // token ya traerá el avatar actualizado desde Authoriza y quedará persistido.
+      setProfile((p: any) => (p ? { ...p, avatarUrl: res.url } : { avatarUrl: res.url }));
+    } catch (err: any) {
+      alert(err.message || 'No se pudo actualizar la foto');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
   const activateProvider = async () => {
     try {
       await api.patch('/profiles/me', { isProvider: true });
@@ -69,9 +101,24 @@ export default function ProfileScreen() {
     <ScrollView style={{ flex: 1, backgroundColor: theme.background }} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       {/* Cabecera de perfil */}
       <Animated.View entering={FadeInDown.springify().damping(16)} style={styles.header}>
-        <View style={[styles.avatar, { backgroundColor: theme.accentSoft }]}>
-          <Ionicons name="person" size={38} color={theme.accent} />
-        </View>
+        <TouchableOpacity activeOpacity={0.85} onPress={changeAvatar} disabled={uploadingAvatar}>
+          <View style={[styles.avatar, { backgroundColor: theme.accentSoft }]}>
+            {profile?.avatarUrl ? (
+              <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImg} />
+            ) : (
+              <Ionicons name="person" size={38} color={theme.accent} />
+            )}
+            {uploadingAvatar && (
+              <View style={styles.avatarOverlay}>
+                <ActivityIndicator color="#fff" />
+              </View>
+            )}
+          </View>
+          {/* Badge de cámara para indicar que es editable */}
+          <View style={[styles.avatarCamera, { backgroundColor: theme.accent }]}>
+            <Ionicons name="camera" size={14} color={theme.accentText} />
+          </View>
+        </TouchableOpacity>
         <Text variant="h1" style={{ marginTop: spacing[3] }}>{profile?.displayName || 'Cargando...'}</Text>
         <Text variant="body" muted style={{ marginTop: 2 }}>{profile?.email}</Text>
         {profile?.isProvider && (
@@ -217,7 +264,10 @@ function Stat({ value, label, accent }: { value: string; label: string; accent: 
 const styles = StyleSheet.create({
   content: { padding: spacing[5], paddingTop: 60, paddingBottom: 120 },
   header: { alignItems: 'center', marginBottom: spacing[4] },
-  avatar: { width: 84, height: 84, borderRadius: radius.pill, justifyContent: 'center', alignItems: 'center' },
+  avatar: { width: 84, height: 84, borderRadius: radius.pill, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  avatarImg: { width: 84, height: 84, borderRadius: radius.pill },
+  avatarOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', alignItems: 'center' },
+  avatarCamera: { position: 'absolute', bottom: 0, right: 0, width: 26, height: 26, borderRadius: 13, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#fff' },
   statsCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', marginTop: spacing[5], alignSelf: 'stretch' },
   stat: { alignItems: 'center', flex: 1 },
   statDivider: { width: 1, height: 32 },

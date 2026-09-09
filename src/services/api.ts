@@ -2,6 +2,9 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4100/api';
+// Authoriza es la identidad central: la foto de perfil (avatar) se sube allí y
+// queda disponible para TODAS las apps del ecosistema.
+const AUTHORIZA_URL = process.env.EXPO_PUBLIC_AUTHORIZA_URL || 'http://localhost:3000/api';
 const TOKEN_KEY = 'shotra_auth_token';
 
 // SecureStore no funciona en web — fallback a localStorage
@@ -81,10 +84,35 @@ async function upload<T>(endpoint: string, file: { uri: string; name: string; ty
   return res.json();
 }
 
+/**
+ * Sube la foto de perfil al endpoint CENTRAL de Authoriza (no al backend de
+ * Shotra), para que el avatar quede disponible para todas las apps. Usa el
+ * mismo token de Shotra (Authoriza lo valida por el secreto compartido).
+ */
+async function uploadAvatar(file: { uri: string; name: string; type: string }): Promise<{ url: string }> {
+  const token = await getToken();
+  const form = new FormData();
+  if (Platform.OS === 'web') {
+    const blob = await fetch(file.uri).then((r) => r.blob());
+    form.append('file', blob, file.name);
+  } else {
+    form.append('file', { uri: file.uri, name: file.name, type: file.type } as any);
+  }
+  const headers: Record<string, string> = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(`${AUTHORIZA_URL}/users/me/avatar`, { method: 'POST', headers, body: form });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: `Error ${res.status}` }));
+    throw new Error(error.message || `Error ${res.status}`);
+  }
+  return res.json();
+}
+
 export const api = {
   get: <T = any>(endpoint: string) => request<T>(endpoint, { method: 'GET' }),
   post: <T = any>(endpoint: string, body?: any) => request<T>(endpoint, { method: 'POST', body: JSON.stringify(body) }),
   patch: <T = any>(endpoint: string, body?: any) => request<T>(endpoint, { method: 'PATCH', body: JSON.stringify(body) }),
   delete: <T = any>(endpoint: string) => request<T>(endpoint, { method: 'DELETE' }),
   upload,
+  uploadAvatar,
 };

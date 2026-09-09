@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image } from 'react-native';
 import { useState, useEffect } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -149,7 +149,11 @@ export default function RequestDetailScreen() {
 
         <View style={[styles.requesterRow, { borderTopColor: theme.glassBorder }]}>
           <View style={[styles.avatarSmall, glass.chip]}>
-            <Ionicons name="person" size={14} color={theme.textMuted} />
+            {request.requester?.avatarUrl ? (
+              <Image source={{ uri: request.requester.avatarUrl }} style={styles.avatarSmallImg} />
+            ) : (
+              <Ionicons name="person" size={14} color={theme.textMuted} />
+            )}
           </View>
           <Text style={[styles.requesterName, { color: theme.text }]}>{request.requester?.displayName}</Text>
           {request.requester?.averageRating > 0 && (
@@ -174,7 +178,17 @@ export default function RequestDetailScreen() {
           {request.proposals.map((p: any) => (
             <View key={p.id} style={[styles.proposalCard, glass.cardStrong]}>
               <View style={styles.proposalHeader}>
-                <Text style={[styles.providerName, { color: theme.text }]}>{p.provider?.displayName}</Text>
+                <View style={styles.providerRow}>
+                  {/* Avatar del ofertante (o ícono si no tiene foto) */}
+                  <View style={[styles.providerAvatar, glass.chip]}>
+                    {p.provider?.avatarUrl ? (
+                      <Image source={{ uri: p.provider.avatarUrl }} style={styles.providerAvatarImg} />
+                    ) : (
+                      <Ionicons name="person" size={14} color={theme.textMuted} />
+                    )}
+                  </View>
+                  <Text style={[styles.providerName, { color: theme.text }]}>{p.provider?.displayName}</Text>
+                </View>
                 <Text style={[styles.proposalPrice, { color: theme.accent }]}>${p.price.toLocaleString()}</Text>
               </View>
               <Text style={[styles.proposalDesc, { color: theme.textMuted }]}>{p.description}</Text>
@@ -288,14 +302,18 @@ const styles = StyleSheet.create({
   infoText: { fontSize: 14 },
   budgetText: { fontSize: 16, fontWeight: '700' },
   requesterRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1 },
-  avatarSmall: { width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+  avatarSmall: { width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  avatarSmallImg: { width: 28, height: 28, borderRadius: 14 },
   requesterName: { fontSize: 14, fontWeight: '500' },
   rating: { color: '#f39c12', fontSize: 13 },
   // Proposals
   section: { marginBottom: 20 },
   sectionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 12 },
   proposalCard: { borderRadius: 12, padding: 14, marginBottom: 10 },
-  proposalHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  proposalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  providerRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 },
+  providerAvatar: { width: 30, height: 30, borderRadius: 15, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  providerAvatarImg: { width: 30, height: 30, borderRadius: 15 },
   providerName: { fontSize: 14, fontWeight: '600' },
   proposalPrice: { fontSize: 16, fontWeight: '800' },
   proposalDesc: { fontSize: 13, marginBottom: 4 },
