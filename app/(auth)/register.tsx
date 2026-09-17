@@ -18,7 +18,25 @@ const DOC_TYPES = [
   { key: 'NIT', label: 'NIT' },
 ];
 
+// Mismos códigos que usa Authoriza en el registro de InOut, para que los
+// datos completos del usuario (sexo, estado civil) queden consistentes en
+// todo el ecosistema, sin importar desde qué app se registró.
+const GENDERS = [
+  { key: 'M', label: 'Masculino' },
+  { key: 'F', label: 'Femenino' },
+  { key: 'O', label: 'Otro' },
+];
+
+const CIVIL_STATUSES = [
+  { key: 'S', label: 'Soltero/a' },
+  { key: 'C', label: 'Casado/a' },
+  { key: 'U', label: 'Unión libre' },
+  { key: 'D', label: 'Divorciado/a' },
+  { key: 'V', label: 'Viudo/a' },
+];
+
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const birthdateRegex = /^\d{4}-\d{2}-\d{2}$/;
 
 export default function RegisterScreen() {
   const { register } = useAuth();
@@ -31,10 +49,15 @@ export default function RegisterScreen() {
   const [documentType, setDocumentType] = useState('CC');
   const [documentNumber, setDocumentNumber] = useState('');
   const [phone, setPhone] = useState('');
+  const [birthdate, setBirthdate] = useState('');
+  const [gender, setGender] = useState('');
+  const [civilStatus, setCivilStatus] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [docPickerOpen, setDocPickerOpen] = useState(false);
+  const [genderPickerOpen, setGenderPickerOpen] = useState(false);
+  const [civilPickerOpen, setCivilPickerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -44,6 +67,9 @@ export default function RegisterScreen() {
     if (!firstName.trim()) return 'Ingresa tu primer nombre';
     if (!firstSurname.trim()) return 'Ingresa tu primer apellido';
     if (!documentNumber.trim()) return 'Ingresa tu número de documento';
+    if (!birthdate.trim() || !birthdateRegex.test(birthdate.trim())) return 'Ingresa tu fecha de nacimiento (AAAA-MM-DD)';
+    if (!gender) return 'Selecciona tu sexo';
+    if (!civilStatus) return 'Selecciona tu estado civil';
     if (!emailRegex.test(email.trim())) return 'Ingresa un correo válido';
     if (password.length < 8) return 'La contraseña debe tener al menos 8 caracteres';
     if (password !== confirm) return 'Las contraseñas no coinciden';
@@ -66,6 +92,9 @@ export default function RegisterScreen() {
         documentType,
         documentNumber: documentNumber.trim(),
         phone: phone.trim() || undefined,
+        birthdate: birthdate.trim(),
+        gender,
+        civilStatus,
       });
       setDone(true);
       if (res.verificationRequired === false) {
@@ -131,7 +160,7 @@ export default function RegisterScreen() {
         </View>
 
         <Text style={[styles.label, { color: theme.textMuted }]}>Tipo de documento *</Text>
-        <TouchableOpacity style={[styles.input, inputStyle, styles.selector]} onPress={() => setDocPickerOpen(!docPickerOpen)}>
+        <TouchableOpacity style={[styles.input, inputStyle, styles.selector]} onPress={() => { setDocPickerOpen(!docPickerOpen); setGenderPickerOpen(false); setCivilPickerOpen(false); }}>
           <Text style={{ color: theme.inputText }}>{DOC_TYPES.find(d => d.key === documentType)?.label}</Text>
           <Ionicons name={docPickerOpen ? 'chevron-up' : 'chevron-down'} size={18} color={theme.textMuted} />
         </TouchableOpacity>
@@ -148,6 +177,41 @@ export default function RegisterScreen() {
 
         <Text style={[styles.label, { color: theme.textMuted }]}>Número de documento *</Text>
         <TextInput style={[styles.input, inputStyle]} value={documentNumber} onChangeText={setDocumentNumber} placeholder="1234567890" placeholderTextColor={theme.inputPlaceholder} keyboardType="number-pad" />
+
+        <Text style={[styles.label, { color: theme.textMuted }]}>Fecha de nacimiento *</Text>
+        <TextInput style={[styles.input, inputStyle]} value={birthdate} onChangeText={setBirthdate} placeholder="AAAA-MM-DD" placeholderTextColor={theme.inputPlaceholder} keyboardType="number-pad" maxLength={10} />
+
+        <Text style={[styles.label, { color: theme.textMuted }]}>Sexo *</Text>
+        <TouchableOpacity style={[styles.input, inputStyle, styles.selector]} onPress={() => { setGenderPickerOpen(!genderPickerOpen); setCivilPickerOpen(false); setDocPickerOpen(false); }}>
+          <Text style={{ color: gender ? theme.inputText : theme.inputPlaceholder }}>{GENDERS.find(g => g.key === gender)?.label || 'Seleccionar sexo'}</Text>
+          <Ionicons name={genderPickerOpen ? 'chevron-up' : 'chevron-down'} size={18} color={theme.textMuted} />
+        </TouchableOpacity>
+        {genderPickerOpen && (
+          <View style={[styles.docList, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            {GENDERS.map((g) => (
+              <TouchableOpacity key={g.key} style={styles.docItem} onPress={() => { setGender(g.key); setGenderPickerOpen(false); }}>
+                <Text style={{ color: gender === g.key ? theme.accent : theme.text, fontWeight: gender === g.key ? '800' : '500' }}>{g.label}</Text>
+                {gender === g.key && <Ionicons name="checkmark" size={16} color={theme.accent} />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        <Text style={[styles.label, { color: theme.textMuted }]}>Estado civil *</Text>
+        <TouchableOpacity style={[styles.input, inputStyle, styles.selector]} onPress={() => { setCivilPickerOpen(!civilPickerOpen); setGenderPickerOpen(false); setDocPickerOpen(false); }}>
+          <Text style={{ color: civilStatus ? theme.inputText : theme.inputPlaceholder }}>{CIVIL_STATUSES.find(c => c.key === civilStatus)?.label || 'Seleccionar estado civil'}</Text>
+          <Ionicons name={civilPickerOpen ? 'chevron-up' : 'chevron-down'} size={18} color={theme.textMuted} />
+        </TouchableOpacity>
+        {civilPickerOpen && (
+          <View style={[styles.docList, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            {CIVIL_STATUSES.map((c) => (
+              <TouchableOpacity key={c.key} style={styles.docItem} onPress={() => { setCivilStatus(c.key); setCivilPickerOpen(false); }}>
+                <Text style={{ color: civilStatus === c.key ? theme.accent : theme.text, fontWeight: civilStatus === c.key ? '800' : '500' }}>{c.label}</Text>
+                {civilStatus === c.key && <Ionicons name="checkmark" size={16} color={theme.accent} />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         <Text style={[styles.label, { color: theme.textMuted }]}>Teléfono</Text>
         <TextInput style={[styles.input, inputStyle]} value={phone} onChangeText={setPhone} placeholder="(opcional)" placeholderTextColor={theme.inputPlaceholder} keyboardType="phone-pad" />

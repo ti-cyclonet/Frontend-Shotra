@@ -32,6 +32,9 @@ export interface RegisterData {
   documentType?: string;
   documentNumber?: string;
   phone?: string;
+  birthdate?: string;
+  gender?: string;
+  civilStatus?: string;
 }
 
 interface AuthContextValue {
