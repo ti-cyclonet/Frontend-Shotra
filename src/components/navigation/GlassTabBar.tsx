@@ -14,6 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../context/ThemeProvider';
+import { useChat } from '../../context/ChatContext';
 import { radius, spacing, shadow, typography, motion } from '../../theme/tokens';
 import { Text } from '../ui/Text';
 
@@ -72,11 +73,24 @@ export function GlassTabBar({ state, navigation }: BottomTabBarProps) {
       ? ({ backdropFilter: 'blur(20px) saturate(180%)', WebkitBackdropFilter: 'blur(20px) saturate(180%)' } as any)
       : {};
 
+  const { totalUnread } = useChat();
+
   const renderTab = (name: string) => {
     const meta = TAB_META[name];
     if (!meta) return null;
     const focused = currentRoute === name;
-    return <TabButton key={name} meta={meta} focused={focused} accent={theme.accent} muted={theme.textMuted} onPress={() => go(name)} />;
+    const badge = name === 'messages' ? totalUnread : 0;
+    return (
+      <TabButton
+        key={name}
+        meta={meta}
+        focused={focused}
+        accent={theme.accent}
+        muted={theme.textMuted}
+        badge={badge}
+        onPress={() => go(name)}
+      />
+    );
   };
 
   return (
@@ -142,12 +156,14 @@ function TabButton({
   focused,
   accent,
   muted,
+  badge = 0,
   onPress,
 }: {
   meta: { icon: IoniconName; iconOutline: IoniconName; label: string };
   focused: boolean;
   accent: string;
   muted: string;
+  badge?: number;
   onPress: () => void;
 }) {
   const scale = useSharedValue(1);
@@ -160,9 +176,16 @@ function TabButton({
       onPressOut={() => (scale.value = withSpring(focused ? 1.1 : 1, motion.spring))}
       style={styles.tab}
     >
-      <Animated.View style={[iconStyle, { transform: [{ scale: focused ? 1.1 : 1 }] }]}>
-        <Ionicons name={focused ? meta.icon : meta.iconOutline} size={22} color={focused ? accent : muted} />
-      </Animated.View>
+      <View>
+        <Animated.View style={[iconStyle, { transform: [{ scale: focused ? 1.1 : 1 }] }]}>
+          <Ionicons name={focused ? meta.icon : meta.iconOutline} size={22} color={focused ? accent : muted} />
+        </Animated.View>
+        {badge > 0 && (
+          <View style={styles.tabBadge}>
+            <Text style={styles.tabBadgeText}>{badge > 9 ? '9+' : badge}</Text>
+          </View>
+        )}
+      </View>
       <Text style={[focused ? typography.navActive : typography.nav, { color: focused ? accent : muted, marginTop: 2 }]}>
         {meta.label}
       </Text>
@@ -242,4 +265,17 @@ const styles = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center' },
   overlayBg: { ...StyleSheet.absoluteFillObject },
   actionsRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing[6] },
+  tabBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -10,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 3,
+    backgroundColor: '#e74c3c',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabBadgeText: { color: '#fff', fontSize: 10, fontWeight: '800', lineHeight: 12 },
 });

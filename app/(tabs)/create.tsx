@@ -1,11 +1,13 @@
-import { View, TouchableOpacity, StyleSheet, ScrollView, Modal, FlatList, Pressable, TextInput } from 'react-native';
-import { useState, useEffect, useMemo } from 'react';
+import { View, TouchableOpacity, StyleSheet, ScrollView, Modal, FlatList, Pressable, TextInput, ActivityIndicator } from 'react-native';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { api } from '../../src/services/api';
 import { alertDialog } from '../../src/services/dialog';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { Text, Card, PressableCard, Button, Input, IconChip, SectionLabel, spacing, radius, typography } from '../../src/components/ui';
+import { RouteMapView, RoutePoint } from '../../src/components/RouteMapView';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
@@ -14,6 +16,9 @@ interface Category {
   name: string;
   slug?: string;
   parent?: { name: string; slug: string } | null;
+  // Si la categoria implica trayecto (origen -> destino, ej. domicilios): se
+  // muestran los campos de recogida/entrega + mapa de ruta.
+  requiresRoute?: boolean;
 }
 
 /** Icono representativo segun el nombre de la categoria/grupo */
@@ -42,6 +47,15 @@ export default function CreateRequestScreen() {
   const [isUrgent, setIsUrgent] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // ─── Trayecto (solo para categorias con requiresRoute) ─────────────────────
+  const [destAddress, setDestAddress] = useState('');
+  const [destCoords, setDestCoords] = useState<RoutePoint | null>(null);
+  const [geocoding, setGeocoding] = useState(false);
+  const [geocodeFailed, setGeocodeFailed] = useState(false);
+  const geocodeTimer = useRef<any>(null);
+  const [originCoords, setOriginCoords] = useState<RoutePoint | null>(null);
+  const [gettingLocation, setGettingLocation] = useState(false);
+
   useEffect(() => {
     api.get('/categories/leaves').then(setCategories).catch(() => {});
   }, []);
@@ -66,9 +80,15 @@ export default function CreateRequestScreen() {
     return groups;
   }, [categories, search]);
 
+  const requiresRoute = !!selected?.requiresRoute;
+
   const handleSubmit = async () => {
     if (!title || !description || !selectedCategory) {
       alertDialog('Campos requeridos', 'Completa titulo, descripcion y categoria');
+      return;
+    }
+    if (requiresRoute && !destCoords) {
+      alertDialog('Falta la dirección', 'Escribe la dirección de entrega para ubicarla en el mapa.');
       return;
     }
     setLoading(true);
@@ -80,10 +100,21 @@ export default function CreateRequestScreen() {
         budgetMin: budgetMin ? parseFloat(budgetMin) : undefined,
         budgetMax: budgetMax ? parseFloat(budgetMax) : undefined,
         isUrgent,
+        ...(requiresRoute && destCoords
+          ? { address: destAddress.trim(), latitude: destCoords.lat, longitude: destCoords.lng }
+          : {}),
+        ...(requiresRoute && originCoords
+          ? {
+              originLatitude: originCoords.lat,
+              originLongitude: originCoords.lng,
+              originAddress: 'Punto de recogida (GPS)',
+            }
+          : {}),
       });
       alertDialog('Publicada', 'Tu solicitud ha sido publicada. Los ofertantes cercanos seran notificados.');
       setTitle(''); setDescription(''); setBudgetMin(''); setBudgetMax('');
       setSelectedCategory(''); setIsUrgent(false);
+      setDestAddress(''); setDestCoords(null); setOriginCoords(null); setGeocodeFailed(false);
       router.push('/(tabs)/my-requests');
     } catch (err: any) {
       alertDialog('Error', err.message || 'No se pudo publicar la solicitud');
@@ -96,6 +127,53 @@ export default function CreateRequestScreen() {
     setSelectedCategory(id);
     setPickerOpen(false);
     setSearch('');
+  };
+
+  /** Geocodifica (Nominatim/OpenStreetMap, sin costo) ~700ms despues de dejar de escribir. */
+  const onDestAddressChange = (value: string) => {
+    setDestAddress(value);
+    setDestCoords(null);
+    setGeocodeFailed(false);
+    if (geocodeTimer.current) clearTimeout(geocodeTimer.current);
+    const address = value.trim();
+    if (address.length < 6) return;
+    geocodeTimer.current = setTimeout(() => geocodeAddress(address), 700);
+  };
+
+  const geocodeAddress = async (address: string) => {
+    setGeocoding(true);
+    setGeocodeFailed(false);
+    try {
+      const q = encodeURIComponent(`${address}, Colombia`);
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${q}`);
+      const results: Array<{ lat: string; lon: string }> = res.ok ? await res.json() : [];
+      const hit = results?.[0];
+      setDestCoords(hit ? { lat: parseFloat(hit.lat), lng: parseFloat(hit.lon) } : null);
+      setGeocodeFailed(!hit);
+    } catch {
+      setDestCoords(null);
+      setGeocodeFailed(true);
+    } finally {
+      setGeocoding(false);
+    }
+  };
+
+  /** Captura la ubicacion GPS como punto de recogida (origen). */
+  const useMyLocationAsOrigin = async () => {
+    setGettingLocation(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        alertDialog('Permiso necesario', 'Activa el permiso de ubicación para capturar el punto de recogida.');
+        return;
+      }
+      const pos = await Location.getCurrentPositionAsync({});
+      setOriginCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+    } catch {
+      alertDialog('Error', 'No se pudo obtener tu ubicación.');
+    } finally {
+      setGettingLocation(false);
+    }
   };
 
   return (
@@ -120,6 +198,54 @@ export default function CreateRequestScreen() {
         </View>
         <Ionicons name="chevron-down" size={20} color={theme.textMuted} />
       </PressableCard>
+
+      {/* Trayecto: solo para categorias de recogida -> entrega (ej. domicilios) */}
+      {requiresRoute && (
+        <>
+          <SectionLabel>Dirección de entrega *</SectionLabel>
+          <Input
+            value={destAddress}
+            onChangeText={onDestAddressChange}
+            placeholder="Ej: Calle 10 #20-30, Barrio Centro"
+          />
+          {geocoding && (
+            <View style={styles.geoStatus}>
+              <ActivityIndicator size="small" color={theme.accent} />
+              <Text variant="caption" muted>Buscando dirección...</Text>
+            </View>
+          )}
+          {!geocoding && geocodeFailed && (
+            <Text variant="caption" style={{ color: theme.danger, marginTop: 4 }}>
+              No se encontró esa dirección. Verifica que esté bien escrita.
+            </Text>
+          )}
+          {!geocoding && destCoords && (
+            <Text variant="caption" style={{ color: theme.success, marginTop: 4 }}>
+              ✔ Dirección ubicada en el mapa
+            </Text>
+          )}
+
+          <PressableCard
+            padding={12}
+            rounded={radius.lg}
+            onPress={useMyLocationAsOrigin}
+            style={[styles.selector, { marginTop: spacing[3] }]}
+          >
+            <IconChip icon="navigate" color={originCoords ? 'green' : 'red'} />
+            <View style={{ flex: 1 }}>
+              <Text variant="bodyStrong">{originCoords ? 'Punto de recogida capturado' : 'Usar mi ubicación como punto de recogida'}</Text>
+              <Text variant="caption" muted>Opcional: de dónde recoge el domiciliario</Text>
+            </View>
+            {gettingLocation ? <ActivityIndicator size="small" color={theme.accent} /> : <Ionicons name="location-outline" size={20} color={theme.textMuted} />}
+          </PressableCard>
+
+          {(originCoords || destCoords) && (
+            <View style={{ marginTop: spacing[3] }}>
+              <RouteMapView origin={originCoords} destination={destCoords} />
+            </View>
+          )}
+        </>
+      )}
 
       <SectionLabel>Titulo *</SectionLabel>
       <Input value={title} onChangeText={setTitle} placeholder="Ej: Necesito delivery de comida" />
@@ -222,6 +348,7 @@ const styles = StyleSheet.create({
   content: { padding: spacing[5], paddingTop: 60, paddingBottom: 120 },
   row: { flexDirection: 'row', gap: spacing[3] },
   half: { flex: 1 },
+  geoStatus: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], marginTop: spacing[2] },
   selector: { flexDirection: 'row', alignItems: 'center', gap: spacing[3] },
   urgentToggle: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], marginTop: spacing[5] },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
