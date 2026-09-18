@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../src/services/api';
 import { alertDialog } from '../../src/services/dialog';
 import { useGlass } from '../../src/context/ThemeProvider';
+import { useChat } from '../../src/context/ChatContext';
 import { Text, Input, spacing, radius } from '../../src/components/ui';
 
 interface Message {
@@ -26,6 +27,7 @@ export default function ChatScreen() {
   const glass = useGlass();
   const theme = glass.theme;
   const listRef = useRef<FlatList>(null);
+  const { refresh: refreshChatBadge } = useChat();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [myProfileId, setMyProfileId] = useState<string | null>(null);
@@ -40,12 +42,14 @@ export default function ChatScreen() {
     try {
       const res = await api.get<Message[]>(`/messaging/${requestId}`);
       setMessages(res);
+      // getMessages marca como leidos en el backend: refrescar el badge ya.
+      refreshChatBadge();
     } catch (err: any) {
       if (!silent) alertDialog('No se pudo cargar el chat', err.message || 'Intenta de nuevo');
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [requestId]);
+  }, [requestId, refreshChatBadge]);
 
   useFocusEffect(
     useCallback(() => {

@@ -5,6 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../src/services/api';
 import { confirmDialog, alertDialog } from '../../src/services/dialog';
 import { useGlass } from '../../src/context/ThemeProvider';
+import { RouteMapView } from '../../src/components/RouteMapView';
+import { spacing } from '../../src/components/ui';
 
 export default function RequestDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -144,6 +146,16 @@ export default function RequestDetailScreen() {
                 : `$${(request.budgetMin || request.budgetMax)?.toLocaleString()}`
               } COP
             </Text>
+          </View>
+        )}
+
+        {/* Mapa de trayecto: solo si la categoría es de recogida -> entrega y hay al menos un punto */}
+        {(request.originLatitude || request.latitude) && (
+          <View style={{ marginTop: spacing[3] }}>
+            <RouteMapView
+              origin={request.originLatitude ? { lat: request.originLatitude, lng: request.originLongitude } : null}
+              destination={request.latitude ? { lat: request.latitude, lng: request.longitude } : null}
+            />
           </View>
         )}
 

@@ -14,6 +14,7 @@ import {
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from '../src/context/AuthContext';
 import { NotificationsProvider } from '../src/context/NotificationsContext';
+import { ChatProvider } from '../src/context/ChatContext';
 import { DialogProvider } from '../src/context/DialogProvider';
 import { ThemeProvider, useTheme } from '../src/context/ThemeProvider';
 
@@ -96,7 +97,9 @@ export default function RootLayout() {
         <DialogProvider>
           <AuthProvider>
             <NotificationsProvider>
-              <ThemedStack />
+              <ChatProvider>
+                <ThemedStack />
+              </ChatProvider>
             </NotificationsProvider>
           </AuthProvider>
         </DialogProvider>

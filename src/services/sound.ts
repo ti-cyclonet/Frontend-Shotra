@@ -20,6 +20,47 @@ export function playNotificationSound() {
   }
 }
 
+/**
+ * Sonido distinto para mensajes de chat (para diferenciarlo de las
+ * notificaciones generales: nuevas ofertas, contrato firmado, evaluaciones).
+ * - Web: un solo tono agudo y corto (vs. el "ding-dong" de dos tonos general).
+ * - Nativo: patron de vibracion doble-pulso (vs. el pulso unico general).
+ */
+export function playChatMessageSound() {
+  try {
+    if (Platform.OS === 'web') {
+      playWebChatBeep();
+    } else {
+      Vibration.vibrate([0, 80, 60, 80]);
+    }
+  } catch {
+    // silencioso: el sonido no debe romper la app
+  }
+}
+
+function playWebChatBeep() {
+  const AudioContextClass =
+    (globalThis as any).AudioContext || (globalThis as any).webkitAudioContext;
+  if (!AudioContextClass) return;
+
+  if (!webAudioCtx) webAudioCtx = new AudioContextClass();
+  const ctx = webAudioCtx;
+  if (ctx.state === 'suspended') ctx.resume();
+
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = 1500;
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.28, now + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + 0.2);
+}
+
 function playWebBeep() {
   const AudioContextClass =
     (globalThis as any).AudioContext || (globalThis as any).webkitAudioContext;

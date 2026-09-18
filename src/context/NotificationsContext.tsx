@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform, Easing } 
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { api } from '../services/api';
-import { playNotificationSound } from '../services/sound';
+import { playNotificationSound, playChatMessageSound } from '../services/sound';
 import { useAuth } from './AuthContext';
 
 interface NotificationItem {
@@ -146,8 +146,15 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       if (!firstLoad.current) {
         const newUnread = fresh.filter((n) => !n.read);
         if (newUnread.length > 0) {
-          playNotificationSound();
-          setBanner(newUnread[0]);
+          const next = newUnread[0];
+          // Sonido distinto para mensajes de chat vs. notificaciones generales
+          // (nueva oferta, contrato firmado, evaluación, etc.).
+          if (next.type === 'NEW_MESSAGE') {
+            playChatMessageSound();
+          } else {
+            playNotificationSound();
+          }
+          setBanner(next);
         }
       }
       firstLoad.current = false;
@@ -192,7 +199,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     const b = banner;
     markRead(b.id);
     setBanner(null);
-    if (b.entityType === 'contract' && b.entityId) router.push(`/contract/${b.entityId}`);
+    if (b.entityType === 'chat' && b.entityId) router.push(`/chat/${b.entityId}`);
+    else if (b.entityType === 'contract' && b.entityId) router.push(`/contract/${b.entityId}`);
     else if (b.entityType === 'request' && b.entityId) router.push(`/request/${b.entityId}`);
   };
 
