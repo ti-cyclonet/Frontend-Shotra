@@ -70,6 +70,7 @@ export default function RegisterScreen() {
     if (!birthdate.trim() || !birthdateRegex.test(birthdate.trim())) return 'Ingresa tu fecha de nacimiento (AAAA-MM-DD)';
     if (!gender) return 'Selecciona tu sexo';
     if (!civilStatus) return 'Selecciona tu estado civil';
+    if (!phone.trim()) return 'Ingresa tu teléfono';
     if (!emailRegex.test(email.trim())) return 'Ingresa un correo válido';
     if (password.length < 8) return 'La contraseña debe tener al menos 8 caracteres';
     if (password !== confirm) return 'Las contraseñas no coinciden';
@@ -91,7 +92,7 @@ export default function RegisterScreen() {
         secondSurname: secondSurname.trim() || undefined,
         documentType,
         documentNumber: documentNumber.trim(),
-        phone: phone.trim() || undefined,
+        phone: phone.trim(),
         birthdate: birthdate.trim(),
         gender,
         civilStatus,
@@ -213,8 +214,8 @@ export default function RegisterScreen() {
           </View>
         )}
 
-        <Text style={[styles.label, { color: theme.textMuted }]}>Teléfono</Text>
-        <TextInput style={[styles.input, inputStyle]} value={phone} onChangeText={setPhone} placeholder="(opcional)" placeholderTextColor={theme.inputPlaceholder} keyboardType="phone-pad" />
+        <Text style={[styles.label, { color: theme.textMuted }]}>Teléfono *</Text>
+        <TextInput style={[styles.input, inputStyle]} value={phone} onChangeText={setPhone} placeholder="300 123 4567" placeholderTextColor={theme.inputPlaceholder} keyboardType="phone-pad" />
 
         <Text style={[styles.label, { color: theme.textMuted }]}>Correo electrónico *</Text>
         <TextInput style={[styles.input, inputStyle]} value={email} onChangeText={setEmail} placeholder="tucorreo@ejemplo.com" placeholderTextColor={theme.inputPlaceholder} keyboardType="email-address" autoCapitalize="none" />

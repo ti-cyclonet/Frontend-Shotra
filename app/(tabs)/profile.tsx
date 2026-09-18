@@ -198,6 +198,14 @@ export default function ProfileScreen() {
           <Badge label={profile?.plan === 'PRO' ? 'PRO' : 'FREE'} solid={profile?.plan === 'PRO'} />
           <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
         </PressableCard>
+        <PressableCard padding={14} rounded={radius.xl} onPress={() => router.push('/edit-profile')} style={[styles.navRow, { marginTop: spacing[2] }]}>
+          <IconChip icon="person-outline" color="slate" />
+          <View style={{ flex: 1 }}>
+            <Text variant="bodyStrong">Editar mis datos</Text>
+            <Text variant="caption" muted>Nombres, fecha de nacimiento, sexo, estado civil y telefono</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
+        </PressableCard>
       </Animated.View>
 
       {!profile?.isProvider && (
