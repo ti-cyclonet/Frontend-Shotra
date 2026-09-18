@@ -1,5 +1,6 @@
 import { View, FlatList, StyleSheet } from 'react-native';
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
+import { router, useFocusEffect } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { api } from '../../src/services/api';
 import { useTheme } from '../../src/context/ThemeProvider';
@@ -9,9 +10,11 @@ export default function MessagesScreen() {
   const { theme } = useTheme();
   const [conversations, setConversations] = useState<any[]>([]);
 
-  useEffect(() => {
-    api.get('/messaging/conversations').then(setConversations).catch(() => {});
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      api.get('/messaging/conversations').then(setConversations).catch(() => {});
+    }, []),
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -26,7 +29,7 @@ export default function MessagesScreen() {
         showsVerticalScrollIndicator={false}
         renderItem={({ item, index }) => (
           <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 55).springify().damping(16)}>
-            <PressableCard padding={14} rounded={radius.xl} style={styles.card}>
+            <PressableCard padding={14} rounded={radius.xl} style={styles.card} onPress={() => router.push(`/chat/${item.requestId}`)}>
               <IconChip icon="person" color="slate" size={46} rounded={radius.pill} />
               <View style={styles.cardContent}>
                 <Text variant="bodyStrong">{item.lastMessage?.sender?.displayName || 'Usuario'}</Text>
