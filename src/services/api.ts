@@ -108,6 +108,53 @@ async function uploadAvatar(file: { uri: string; name: string; type: string }): 
   return res.json();
 }
 
+/**
+ * Datos de perfil del usuario en Authoriza (nombres, documento, fecha de
+ * nacimiento, sexo, estado civil, teléfono). Es la fuente de verdad central
+ * del ecosistema, no el backend de Shotra. Usa el mismo token de Shotra.
+ */
+async function getAuthorizaProfile(): Promise<any> {
+  const token = await getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(`${AUTHORIZA_URL}/users/me`, { headers });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: `Error ${res.status}` }));
+    throw new Error(error.message || `Error ${res.status}`);
+  }
+  return res.json();
+}
+
+/**
+ * Actualiza los datos de persona natural del usuario en Authoriza (nombres,
+ * fecha de nacimiento, sexo, estado civil, teléfono). Autoservicio: solo
+ * puede editar sus propios datos (el id viene del token, no del body).
+ */
+async function updateAuthorizaProfile(data: {
+  firstName?: string;
+  secondName?: string;
+  firstSurname?: string;
+  secondSurname?: string;
+  birthDate?: string;
+  sex?: string;
+  maritalStatus?: string;
+  phone?: string;
+}): Promise<any> {
+  const token = await getToken();
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(`${AUTHORIZA_URL}/users/me`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: `Error ${res.status}` }));
+    throw new Error(error.message || `Error ${res.status}`);
+  }
+  return res.json();
+}
+
 export const api = {
   get: <T = any>(endpoint: string) => request<T>(endpoint, { method: 'GET' }),
   post: <T = any>(endpoint: string, body?: any) => request<T>(endpoint, { method: 'POST', body: JSON.stringify(body) }),
@@ -115,4 +162,6 @@ export const api = {
   delete: <T = any>(endpoint: string) => request<T>(endpoint, { method: 'DELETE' }),
   upload,
   uploadAvatar,
+  getAuthorizaProfile,
+  updateAuthorizaProfile,
 };

@@ -31,7 +31,7 @@ export interface RegisterData {
   secondSurname?: string;
   documentType?: string;
   documentNumber?: string;
-  phone?: string;
+  phone: string;
   birthdate?: string;
   gender?: string;
   civilStatus?: string;
