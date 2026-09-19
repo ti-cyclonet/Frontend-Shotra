@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, ReactNode, useC
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import * as Notifications from 'expo-notifications';
 import { api } from '../services/api';
 import { playNotificationSound, playChatMessageSound } from '../services/sound';
 import { useAuth } from './AuthContext';
@@ -178,6 +179,23 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       setUnread(0);
     } catch {}
   }, []);
+
+  // Pedir permiso de notificaciones una vez (necesario en Android 13+ e iOS
+  // para que el badge del ícono se muestre). Best-effort: si el usuario lo
+  // niega, el badge simplemente no aparece; el resto de la app sigue igual.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    Notifications.requestPermissionsAsync().catch(() => {});
+  }, [isAuthenticated]);
+
+  // Badge numérico en el ícono de la app (pantalla de inicio), reflejando el
+  // total de notificaciones pendientes (incluye mensajes de chat, ya que
+  // NEW_MESSAGE es un tipo más dentro de este mismo conteo). No depende de
+  // tener una notificación real en la bandeja: setBadgeCountAsync lo fija
+  // directamente sobre el ícono en los launchers que lo soportan.
+  useEffect(() => {
+    Notifications.setBadgeCountAsync(unread).catch(() => {});
+  }, [unread]);
 
   // Polling mientras hay sesion
   useEffect(() => {
