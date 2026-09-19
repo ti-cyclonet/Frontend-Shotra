@@ -35,6 +35,7 @@ export default function ChatScreen() {
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
+  const [closed, setClosed] = useState(false);
 
   const load = useCallback(async (silent = false) => {
     if (!requestId) return;
@@ -45,7 +46,11 @@ export default function ChatScreen() {
       // getMessages marca como leidos en el backend: refrescar el badge ya.
       refreshChatBadge();
     } catch (err: any) {
-      if (!silent) alertDialog('No se pudo cargar el chat', err.message || 'Intenta de nuevo');
+      if (err.message?.includes('finalizado')) {
+        setClosed(true);
+      } else if (!silent) {
+        alertDialog('No se pudo cargar el chat', err.message || 'Intenta de nuevo');
+      }
     } finally {
       if (!silent) setLoading(false);
     }
@@ -57,14 +62,16 @@ export default function ChatScreen() {
       api.get(`/requests/${requestId}`).then((r: any) => setRequestTitle(r?.title || null)).catch(() => {});
       load();
 
-      const interval = setInterval(() => load(true), POLL_INTERVAL_MS);
+      const interval = setInterval(() => {
+        if (!closed) load(true);
+      }, POLL_INTERVAL_MS);
       return () => clearInterval(interval);
-    }, [requestId, load]),
+    }, [requestId, load, closed]),
   );
 
   const handleSend = async () => {
     const content = text.trim();
-    if (!content || sending) return;
+    if (!content || sending || closed) return;
 
     setSending(true);
     setText('');
@@ -95,6 +102,13 @@ export default function ChatScreen() {
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator color={theme.accent} />
+        </View>
+      ) : closed ? (
+        <View style={styles.center}>
+          <Ionicons name="lock-closed-outline" size={48} color={theme.textMuted} />
+          <Text variant="body" muted style={{ marginTop: spacing[3], textAlign: 'center', paddingHorizontal: spacing[6] }}>
+            Este chat ya no está disponible: el trabajo fue finalizado.
+          </Text>
         </View>
       ) : (
         <FlatList
@@ -136,22 +150,24 @@ export default function ChatScreen() {
         />
       )}
 
-      <View style={[styles.inputBar, { borderTopColor: theme.glassBorder }]}>
-        <Input
-          containerStyle={{ flex: 1 }}
-          value={text}
-          onChangeText={setText}
-          placeholder="Escribe un mensaje..."
-          multiline
-        />
-        <TouchableOpacity
-          style={[styles.sendButton, { backgroundColor: theme.accent, opacity: text.trim() && !sending ? 1 : 0.5 }]}
-          onPress={handleSend}
-          disabled={!text.trim() || sending}
-        >
-          {sending ? <ActivityIndicator color={theme.accentText} size="small" /> : <Ionicons name="send" size={18} color={theme.accentText} />}
-        </TouchableOpacity>
-      </View>
+      {!closed && (
+        <View style={[styles.inputBar, { borderTopColor: theme.glassBorder }]}>
+          <Input
+            containerStyle={{ flex: 1 }}
+            value={text}
+            onChangeText={setText}
+            placeholder="Escribe un mensaje..."
+            multiline
+          />
+          <TouchableOpacity
+            style={[styles.sendButton, { backgroundColor: theme.accent, opacity: text.trim() && !sending ? 1 : 0.5 }]}
+            onPress={handleSend}
+            disabled={!text.trim() || sending}
+          >
+            {sending ? <ActivityIndicator color={theme.accentText} size="small" /> : <Ionicons name="send" size={18} color={theme.accentText} />}
+          </TouchableOpacity>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }
