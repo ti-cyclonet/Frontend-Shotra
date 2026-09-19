@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useNotifications } from '../src/context/NotificationsContext';
 import { useGlass } from '../src/context/ThemeProvider';
+import { confirmDialog } from '../src/services/dialog';
 
 const ICON_BY_TYPE: Record<string, any> = {
   NEW_PROPOSAL: 'paper-plane',
@@ -26,14 +27,20 @@ function timeAgo(iso: string) {
 }
 
 export default function NotificationsScreen() {
-  const { items, markRead, markAllRead } = useNotifications();
+  const { items, markRead, markAllRead, clearAll } = useNotifications();
   const glass = useGlass();
   const theme = glass.theme;
 
   const open = (n: any) => {
     if (!n.read) markRead(n.id);
-    if (n.entityType === 'contract' && n.entityId) router.push(`/contract/${n.entityId}`);
+    if (n.entityType === 'chat' && n.entityId) router.push(`/chat/${n.entityId}`);
+    else if (n.entityType === 'contract' && n.entityId) router.push(`/contract/${n.entityId}`);
     else if (n.entityType === 'request' && n.entityId) router.push(`/request/${n.entityId}`);
+  };
+
+  const handleClearAll = async () => {
+    const ok = await confirmDialog('Vaciar notificaciones', 'Se eliminarán todas tus notificaciones. Esta acción no se puede deshacer.', 'Vaciar');
+    if (ok) clearAll();
   };
 
   return (
@@ -43,9 +50,16 @@ export default function NotificationsScreen() {
           <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: theme.text }]}>Notificaciones</Text>
-        <TouchableOpacity onPress={markAllRead}>
-          <Text style={[styles.markAll, { color: theme.accent }]}>Marcar leidas</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity onPress={markAllRead}>
+            <Text style={[styles.markAll, { color: theme.accent }]}>Marcar leidas</Text>
+          </TouchableOpacity>
+          {items.length > 0 && (
+            <TouchableOpacity onPress={handleClearAll}>
+              <Ionicons name="trash-outline" size={18} color={theme.danger} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       <FlatList
@@ -84,6 +98,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingTop: 52 },
   backButton: { padding: 4 },
   headerTitle: { fontSize: 20, fontWeight: '800' },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   markAll: { fontSize: 13, fontWeight: '700' },
   list: { padding: 16, paddingTop: 4 },
   card: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, padding: 14, marginBottom: 10 },
