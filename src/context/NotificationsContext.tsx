@@ -31,6 +31,33 @@ const NotificationsContext = createContext<NotificationsContextValue | null>(nul
 const POLL_INTERVAL = 12000; // 12s
 const BANNER_DURATION = 5000; // 5s visible
 
+// En Android, setBadgeCountAsync por sí solo NO alcanza: la mayoría de
+// launchers (Samsung One UI, Pixel, etc.) calculan el badge del ícono a
+// partir de las notificaciones REALES activas en la bandeja del sistema, no
+// de un número arbitrario. Por eso, además de nuestro banner/sonido propios
+// dentro de la app, hay que publicar una notificación local real cuando llega
+// algo nuevo — así el badge (y la bandeja al deslizar desde arriba) reflejan
+// lo mismo que ve el usuario abriendo la app.
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    // El banner/sonido ya los maneja la UI propia (NotificationBanner + los
+    // de sound.ts); acá solo se necesita que la notificación quede
+    // registrada en el sistema (bandeja) para que el badge del ícono se
+    // actualice. shouldShowAlert:false evita el pop-up nativo duplicado.
+    shouldShowAlert: false,
+    shouldPlaySound: false,
+    shouldSetBadge: true,
+  }),
+});
+
+if (Platform.OS === 'android') {
+  Notifications.setNotificationChannelAsync('default', {
+    name: 'default',
+    importance: Notifications.AndroidImportance.DEFAULT,
+    showBadge: true,
+  }).catch(() => {});
+}
+
 const META_BY_TYPE: Record<string, { icon: any; color: string }> = {
   NEW_PROPOSAL: { icon: 'paper-plane', color: '#4ecdc4' },
   PROPOSAL_ACCEPTED: { icon: 'checkmark-circle', color: '#2ecc71' },
@@ -156,6 +183,23 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
             playNotificationSound();
           }
           setBanner(next);
+
+          // Publicar una notificación local real por cada novedad: es lo que
+          // hace que el badge del ícono aparezca en Android (el launcher lo
+          // calcula de las notificaciones activas en la bandeja, no de un
+          // número arbitrario). shouldShowAlert:false en el handler evita que
+          // además aparezca el pop-up nativo duplicando nuestro banner propio.
+          for (const n of newUnread) {
+            Notifications.scheduleNotificationAsync({
+              content: {
+                title: n.title,
+                body: n.body,
+                badge: res.unread || 0,
+                data: { notificationId: n.id, entityType: n.entityType, entityId: n.entityId },
+              },
+              trigger: null,
+            }).catch(() => {});
+          }
         }
       }
       firstLoad.current = false;
@@ -177,6 +221,9 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       await api.patch('/notifications/read-all', {});
       setItems((prev) => prev.map((n) => ({ ...n, read: true })));
       setUnread(0);
+      // Limpiar la bandeja del sistema: si no, quedan notificaciones "viejas"
+      // activas y el badge del ícono no baja a 0 aunque aquí ya diga 0.
+      Notifications.dismissAllNotificationsAsync().catch(() => {});
     } catch {}
   }, []);
 
