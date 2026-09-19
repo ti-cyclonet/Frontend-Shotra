@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform, Easing } 
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { api } from '../services/api';
 import { playNotificationSound, playChatMessageSound } from '../services/sound';
 import { useAuth } from './AuthContext';
@@ -24,6 +25,7 @@ interface NotificationsContextValue {
   refresh: () => Promise<void>;
   markRead: (id: string) => Promise<void>;
   markAllRead: () => Promise<void>;
+  clearAll: () => Promise<void>;
 }
 
 const NotificationsContext = createContext<NotificationsContextValue | null>(null);
@@ -167,39 +169,44 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       setItems(list);
       setUnread(res.unread || 0);
 
-      // Detectar nuevas (no vistas antes) para banner + sonido
+      // Detectar nuevas (no vistas antes de esta sesión de JS)
       const fresh = list.filter((n) => !knownIds.current.has(n.id));
       list.forEach((n) => knownIds.current.add(n.id));
+      const freshUnread = fresh.filter((n) => !n.read);
 
-      if (!firstLoad.current) {
-        const newUnread = fresh.filter((n) => !n.read);
-        if (newUnread.length > 0) {
-          const next = newUnread[0];
-          // Sonido distinto para mensajes de chat vs. notificaciones generales
-          // (nueva oferta, contrato firmado, evaluación, etc.).
+      if (freshUnread.length > 0) {
+        // Publicar/actualizar una notificación local real por cada una — ESTO
+        // corre SIEMPRE, incluida la primera carga (reabrir la app después de
+        // minimizarla cuenta como "primera carga" de este componente). Sin
+        // esto, el badge del ícono nunca aparecía al reabrir: el launcher lo
+        // calcula de las notificaciones activas en la bandeja, no de un
+        // número arbitrario. `identifier: n.id` hace que reposteos del mismo
+        // id (ej. sigue sin leerse en la próxima apertura) reemplacen la
+        // entrada en vez de duplicarla.
+        for (const n of freshUnread) {
+          Notifications.scheduleNotificationAsync({
+            identifier: n.id,
+            content: {
+              title: n.title,
+              body: n.body,
+              badge: res.unread || 0,
+              data: { notificationId: n.id, entityType: n.entityType, entityId: n.entityId },
+            },
+            trigger: null,
+          }).catch(() => {});
+        }
+
+        // Banner + sonido propios: SOLO para novedades reales durante la
+        // sesión, no en la primera carga (evita el "spam" de todo lo
+        // pendiente apenas se abre la app).
+        if (!firstLoad.current) {
+          const next = freshUnread[0];
           if (next.type === 'NEW_MESSAGE') {
             playChatMessageSound();
           } else {
             playNotificationSound();
           }
           setBanner(next);
-
-          // Publicar una notificación local real por cada novedad: es lo que
-          // hace que el badge del ícono aparezca en Android (el launcher lo
-          // calcula de las notificaciones activas en la bandeja, no de un
-          // número arbitrario). shouldShowAlert:false en el handler evita que
-          // además aparezca el pop-up nativo duplicando nuestro banner propio.
-          for (const n of newUnread) {
-            Notifications.scheduleNotificationAsync({
-              content: {
-                title: n.title,
-                body: n.body,
-                badge: res.unread || 0,
-                data: { notificationId: n.id, entityType: n.entityType, entityId: n.entityId },
-              },
-              trigger: null,
-            }).catch(() => {});
-          }
         }
       }
       firstLoad.current = false;
@@ -227,13 +234,63 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, []);
 
-  // Pedir permiso de notificaciones una vez (necesario en Android 13+ e iOS
-  // para que el badge del ícono se muestre). Best-effort: si el usuario lo
-  // niega, el badge simplemente no aparece; el resto de la app sigue igual.
+  /** Vacía (borra) todas las notificaciones — no solo marcarlas leídas. */
+  const clearAll = useCallback(async () => {
+    try {
+      await api.delete('/notifications');
+      setItems([]);
+      setUnread(0);
+      knownIds.current.clear();
+      Notifications.dismissAllNotificationsAsync().catch(() => {});
+    } catch {}
+  }, []);
+
+  // Pedir permiso de notificaciones y registrar el push token del
+  // dispositivo (necesario en Android 13+ e iOS para el badge y para poder
+  // recibir notificaciones reales aunque la app esté minimizada o cerrada).
+  // Best-effort: si el usuario niega el permiso, simplemente no llegan push
+  // ni badge; el resto de la app sigue funcionando igual (banner in-app +
+  // sonido siguen dependiendo del polling mientras la app esté abierta).
   useEffect(() => {
     if (!isAuthenticated) return;
-    Notifications.requestPermissionsAsync().catch(() => {});
+    (async () => {
+      try {
+        const { status } = await Notifications.requestPermissionsAsync();
+        if (status !== 'granted') return;
+
+        const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+        const { data: token } = await Notifications.getExpoPushTokenAsync(
+          projectId ? { projectId } : undefined,
+        );
+        await api.post('/push-tokens', { token, platform: Platform.OS }).catch(() => {});
+      } catch {
+        // Sin push token (emulador sin Google Play Services, permiso
+        // denegado, etc.): la app sigue funcionando con polling in-app.
+      }
+    })();
   }, [isAuthenticated]);
+
+  // Notificación push recibida mientras la app está abierta: refrescar ya
+  // (no esperar al próximo tick del polling) para que el badge/banner
+  // in-app queden al día de inmediato.
+  useEffect(() => {
+    const sub = Notifications.addNotificationReceivedListener(() => {
+      refresh();
+    });
+    return () => sub.remove();
+  }, [refresh]);
+
+  // Tocar la notificación (bandeja del sistema o banner nativo) navega al
+  // mismo destino que el banner propio de la app.
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data as { entityType?: string; entityId?: string };
+      if (data?.entityType === 'chat' && data.entityId) router.push(`/chat/${data.entityId}`);
+      else if (data?.entityType === 'contract' && data.entityId) router.push(`/contract/${data.entityId}`);
+      else if (data?.entityType === 'request' && data.entityId) router.push(`/request/${data.entityId}`);
+    });
+    return () => sub.remove();
+  }, []);
 
   // Badge numérico en el ícono de la app (pantalla de inicio), reflejando el
   // total de notificaciones pendientes (incluye mensajes de chat, ya que
@@ -270,7 +327,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <NotificationsContext.Provider value={{ items, unread, refresh, markRead, markAllRead }}>
+    <NotificationsContext.Provider value={{ items, unread, refresh, markRead, markAllRead, clearAll }}>
       {children}
       {banner && (
         <NotificationBanner
