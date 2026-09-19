@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "929790985436",
+    "project_id": "shotra-73eb6",
+    "storage_bucket": "shotra-73eb6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:929790985436:android:18b29e8389d19a5420e019",
+        "android_client_info": {
+          "package_name": "com.cyclonet.shotra"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBatgQYkunAOxVI-ne1kQmIwit0qNbmcx0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

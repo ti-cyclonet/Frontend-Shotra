@@ -29,13 +29,21 @@ export default function MessagesScreen() {
         showsVerticalScrollIndicator={false}
         renderItem={({ item, index }) => (
           <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 55).springify().damping(16)}>
-            <PressableCard padding={14} rounded={radius.xl} style={styles.card} onPress={() => router.push(`/chat/${item.requestId}`)}>
+            <PressableCard
+              padding={14}
+              rounded={radius.xl}
+              style={[styles.card, item.closed && styles.cardClosed]}
+              disabled={item.closed}
+              onPress={() => { if (!item.closed) router.push(`/chat/${item.requestId}`); }}
+            >
               <IconChip icon="person" color="slate" size={46} rounded={radius.pill} />
               <View style={styles.cardContent}>
                 <Text variant="bodyStrong">{item.lastMessage?.sender?.displayName || 'Usuario'}</Text>
-                <Text variant="caption" muted numberOfLines={1} style={{ marginTop: 2 }}>{item.lastMessage?.content}</Text>
+                <Text variant="caption" muted numberOfLines={1} style={{ marginTop: 2 }}>
+                  {item.closed ? 'Trabajo finalizado' : item.lastMessage?.content}
+                </Text>
               </View>
-              {item.unreadCount > 0 && <CountDot count={item.unreadCount} />}
+              {!item.closed && item.unreadCount > 0 && <CountDot count={item.unreadCount} />}
             </PressableCard>
           </Animated.View>
         )}
@@ -56,6 +64,7 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: spacing[5], paddingTop: 60, paddingBottom: spacing[3] },
   list: { paddingHorizontal: spacing[5], paddingTop: spacing[2], paddingBottom: 120 },
   card: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], marginBottom: spacing[2] },
+  cardClosed: { opacity: 0.5 },
   cardContent: { flex: 1 },
   empty: { alignItems: 'center', paddingTop: 100, paddingHorizontal: spacing[6] },
 });
