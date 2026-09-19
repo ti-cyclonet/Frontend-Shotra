@@ -183,15 +183,26 @@ export default function RequestDetailScreen() {
         </TouchableOpacity>
       )}
 
-      {/* Chat: solo se habilita cuando la propuesta fue aceptada y AMBAS partes firmaron el contrato */}
+      {/* Chat: se habilita cuando la propuesta fue aceptada y AMBAS partes
+          firmaron el contrato; se deshabilita de nuevo cuando el trabajo ya
+          quedó Completado/Evaluado (se muestra apagado, no desaparece de golpe). */}
       {myProfileId && request.contract?.requesterSignedAt && request.contract?.providerSignedAt &&
-        (myProfileId === request.requesterId || request.contract?.providerId === myProfileId) && (
-        <TouchableOpacity style={[styles.contractButton, { backgroundColor: theme.accent }]} onPress={() => router.push(`/chat/${request.id}`)}>
-          <Ionicons name="chatbubbles" size={18} color={theme.accentText} />
-          <Text style={[styles.contractButtonText, { color: theme.accentText }]}>Chat</Text>
-          <Ionicons name="chevron-forward" size={18} color={theme.accentText} />
-        </TouchableOpacity>
-      )}
+        (myProfileId === request.requesterId || request.contract?.providerId === myProfileId) && (() => {
+          const closed = request.contract?.status === 'COMPLETED' || request.contract?.status === 'EVALUATED';
+          return (
+            <TouchableOpacity
+              style={[styles.contractButton, { backgroundColor: closed ? theme.textMuted : theme.accent }]}
+              disabled={closed}
+              onPress={() => router.push(`/chat/${request.id}`)}
+            >
+              <Ionicons name="chatbubbles" size={18} color={theme.accentText} />
+              <Text style={[styles.contractButtonText, { color: theme.accentText }]}>
+                {closed ? 'Chat (trabajo finalizado)' : 'Chat'}
+              </Text>
+              {!closed && <Ionicons name="chevron-forward" size={18} color={theme.accentText} />}
+            </TouchableOpacity>
+          );
+        })()}
 
       {/* Propuestas existentes */}
       {request.proposals?.length > 0 && (
