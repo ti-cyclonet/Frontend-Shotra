@@ -145,7 +145,15 @@ export default function CreateRequestScreen() {
     setGeocodeFailed(false);
     try {
       const q = encodeURIComponent(`${address}, Colombia`);
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${q}`);
+      // Nominatim exige identificar la app (Referer o User-Agent) por su
+      // politica de uso: https://operations.osmfoundation.org/policies/nominatim/
+      // El navegador web (InOut) manda un Referer real automaticamente, pero
+      // fetch() en Android/iOS no manda Referer y usa un User-Agent generico
+      // (ej. okhttp), que Nominatim suele bloquear o devolver vacio. Sin este
+      // header, la busqueda de direccion fallaba siempre en la app movil.
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${q}`, {
+        headers: { 'User-Agent': 'ShotraApp/1.0 (contacto@cyclonet.com.co)' },
+      });
       const results: Array<{ lat: string; lon: string }> = res.ok ? await res.json() : [];
       const hit = results?.[0];
       setDestCoords(hit ? { lat: parseFloat(hit.lat), lng: parseFloat(hit.lon) } : null);
