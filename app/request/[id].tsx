@@ -211,7 +211,10 @@ export default function RequestDetailScreen() {
           {request.proposals.map((p: any) => (
             <View key={p.id} style={[styles.proposalCard, glass.cardStrong]}>
               <View style={styles.proposalHeader}>
-                <View style={styles.providerRow}>
+                <TouchableOpacity
+                  style={styles.providerRow}
+                  onPress={() => p.provider?.id && router.push(`/provider/${p.provider.id}`)}
+                >
                   {/* Avatar del ofertante (o ícono si no tiene foto) */}
                   <View style={[styles.providerAvatar, glass.chip]}>
                     {p.provider?.avatarUrl ? (
@@ -221,13 +224,22 @@ export default function RequestDetailScreen() {
                     )}
                   </View>
                   <Text style={[styles.providerName, { color: theme.text }]}>{p.provider?.displayName}</Text>
-                </View>
+                </TouchableOpacity>
                 <Text style={[styles.proposalPrice, { color: theme.accent }]}>${p.price.toLocaleString()}</Text>
               </View>
               <Text style={[styles.proposalDesc, { color: theme.textMuted }]}>{p.description}</Text>
               {p.estimatedTime && <Text style={[styles.proposalTime, { color: theme.textMuted }]}>Tiempo: {p.estimatedTime}</Text>}
               {p.provider?.averageRating > 0 && (
                 <Text style={styles.providerRating}>★ {p.provider.averageRating.toFixed(1)} · {p.provider.completedJobs} trabajos</Text>
+              )}
+              {p.provider?.id && (
+                <TouchableOpacity
+                  style={[styles.viewProfileBtn, { borderColor: theme.accent }]}
+                  onPress={() => router.push(`/provider/${p.provider.id}`)}
+                >
+                  <Ionicons name="images-outline" size={14} color={theme.accent} />
+                  <Text style={[styles.viewProfileBtnText, { color: theme.accent }]}>Ver perfil, trabajos y comentarios</Text>
+                </TouchableOpacity>
               )}
               {/* Botones aceptar/rechazar (solo para el solicitante, propuestas pendientes) */}
               {myProfileId === request.requester?.id && p.status === 'PENDING' && (
@@ -352,6 +364,8 @@ const styles = StyleSheet.create({
   proposalDesc: { fontSize: 13, marginBottom: 4 },
   proposalTime: { fontSize: 12 },
   providerRating: { color: '#f39c12', fontSize: 12, marginTop: 4 },
+  viewProfileBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: 8, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1 },
+  viewProfileBtnText: { fontSize: 12, fontWeight: '700' },
   // CTA
   proposalButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, padding: 16, marginBottom: 20 },
   proposalButtonText: { fontSize: 16, fontWeight: '800' },
