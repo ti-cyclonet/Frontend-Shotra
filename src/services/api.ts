@@ -109,6 +109,37 @@ async function uploadAvatar(file: { uri: string; name: string; type: string }): 
 }
 
 /**
+ * Sube una foto de un trabajo realizado a mi portafolio (Shotra), con
+ * titulo/descripcion opcional. A diferencia de upload(), envia campos
+ * adicionales junto con el archivo en el mismo multipart/form-data.
+ */
+async function uploadPortfolioItem(
+  file: { uri: string; name: string; type: string },
+  fields: { title: string; description?: string },
+): Promise<any> {
+  const token = await getToken();
+  const form = new FormData();
+  if (Platform.OS === 'web') {
+    const blob = await fetch(file.uri).then((r) => r.blob());
+    form.append('file', blob, file.name);
+  } else {
+    form.append('file', { uri: file.uri, name: file.name, type: file.type } as any);
+  }
+  form.append('title', fields.title);
+  if (fields.description) form.append('description', fields.description);
+
+  const headers: Record<string, string> = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(`${API_URL}/portfolio`, { method: 'POST', headers, body: form });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: `Error ${res.status}` }));
+    throw new Error(error.message || `Error ${res.status}`);
+  }
+  return res.json();
+}
+
+/**
  * Datos de perfil del usuario en Authoriza (nombres, documento, fecha de
  * nacimiento, sexo, estado civil, teléfono). Es la fuente de verdad central
  * del ecosistema, no el backend de Shotra. Usa el mismo token de Shotra.
@@ -162,6 +193,7 @@ export const api = {
   delete: <T = any>(endpoint: string) => request<T>(endpoint, { method: 'DELETE' }),
   upload,
   uploadAvatar,
+  uploadPortfolioItem,
   getAuthorizaProfile,
   updateAuthorizaProfile,
 };

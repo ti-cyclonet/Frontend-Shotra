@@ -1,4 +1,4 @@
-import { View, StyleSheet, TouchableOpacity, Switch, ScrollView, Modal, FlatList, Image, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Switch, ScrollView, Modal, FlatList, Image, ActivityIndicator, TextInput } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useState, useEffect } from 'react';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -17,6 +17,13 @@ export default function ProfileScreen() {
   const [categories, setCategories] = useState<any[]>([]);
   const [addingSkill, setAddingSkill] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  // Portafolio (fotos de trabajos realizados)
+  const [pendingPortfolioAsset, setPendingPortfolioAsset] = useState<any>(null);
+  const [showPortfolioModal, setShowPortfolioModal] = useState(false);
+  const [portfolioTitle, setPortfolioTitle] = useState('');
+  const [portfolioDescription, setPortfolioDescription] = useState('');
+  const [savingPortfolio, setSavingPortfolio] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -85,6 +92,59 @@ export default function ProfileScreen() {
       alert(err.message || 'No se pudo actualizar la foto');
     } finally {
       setUploadingAvatar(false);
+    }
+  };
+
+  // Elegir una foto de un trabajo realizado y abrir el modal para titularla
+  // antes de subirla (la subida real ocurre al confirmar, en savePortfolioItem).
+  const pickPortfolioImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+      if (result.canceled || !result.assets?.length) return;
+      setPendingPortfolioAsset(result.assets[0]);
+      setPortfolioTitle('');
+      setPortfolioDescription('');
+      setShowPortfolioModal(true);
+    } catch (err: any) {
+      alert(err.message || 'No se pudo abrir la galeria');
+    }
+  };
+
+  const savePortfolioItem = async () => {
+    if (!pendingPortfolioAsset) return;
+    if (!portfolioTitle.trim()) {
+      alert('Ingresa un titulo para la foto');
+      return;
+    }
+    setSavingPortfolio(true);
+    try {
+      const name = pendingPortfolioAsset.fileName || `trabajo_${Date.now()}.jpg`;
+      const type = pendingPortfolioAsset.mimeType || 'image/jpeg';
+      await api.uploadPortfolioItem(
+        { uri: pendingPortfolioAsset.uri, name, type },
+        { title: portfolioTitle.trim(), description: portfolioDescription.trim() || undefined },
+      );
+      setShowPortfolioModal(false);
+      setPendingPortfolioAsset(null);
+      loadProfile();
+    } catch (err: any) {
+      alert(err.message || 'No se pudo subir la foto');
+    } finally {
+      setSavingPortfolio(false);
+    }
+  };
+
+  const removePortfolioItem = async (itemId: string) => {
+    try {
+      await api.delete(`/portfolio/${itemId}`);
+      loadProfile();
+    } catch (err: any) {
+      alert(err.message || 'No se pudo eliminar');
     }
   };
 
@@ -186,6 +246,41 @@ export default function ProfileScreen() {
         </Card>
       </Animated.View>
 
+      {/* Portafolio: fotos de trabajos realizados, visibles para los solicitantes */}
+      {profile?.isProvider && (
+        <Animated.View entering={FadeInDown.delay(170).springify().damping(16)}>
+          <SectionLabel>Portafolio</SectionLabel>
+          <Card padding={16} rounded={radius.xl}>
+            <View style={styles.sectionHeader}>
+              <Text variant="cardTitle">Trabajos realizados</Text>
+              <TouchableOpacity onPress={pickPortfolioImage} hitSlop={8}>
+                <Ionicons name="add-circle" size={26} color={theme.accent} />
+              </TouchableOpacity>
+            </View>
+            {profile?.portfolio?.length > 0 ? (
+              <View style={styles.portfolioGrid}>
+                {profile.portfolio.map((item: any) => (
+                  <View key={item.id} style={styles.portfolioItem}>
+                    <Image source={{ uri: item.imageUrl }} style={styles.portfolioImg} />
+                    <TouchableOpacity
+                      style={styles.portfolioRemove}
+                      onPress={() => removePortfolioItem(item.id)}
+                      hitSlop={8}
+                    >
+                      <Ionicons name="close-circle" size={20} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text variant="body" muted style={{ fontStyle: 'italic', paddingVertical: spacing[2] }}>
+                Agrega fotos de tus trabajos para que los solicitantes conozcan tu experiencia
+              </Text>
+            )}
+          </Card>
+        </Animated.View>
+      )}
+
       {/* Estado de cuenta */}
       <Animated.View entering={FadeInDown.delay(200).springify().damping(16)}>
         <SectionLabel>Cuenta</SectionLabel>
@@ -256,6 +351,51 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Modal titular/describir la foto del trabajo antes de subirla */}
+      <Modal visible={showPortfolioModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
+            <View style={[styles.modalHandle, { backgroundColor: theme.glassBorder }]} />
+            <View style={styles.modalHeader}>
+              <Text variant="h2">Nueva foto de trabajo</Text>
+              <TouchableOpacity onPress={() => setShowPortfolioModal(false)} hitSlop={8}>
+                <Ionicons name="close" size={24} color={theme.text} />
+              </TouchableOpacity>
+            </View>
+            {pendingPortfolioAsset?.uri && (
+              <Image source={{ uri: pendingPortfolioAsset.uri }} style={styles.portfolioPreview} />
+            )}
+            <Text variant="caption" muted style={{ marginTop: spacing[3], marginBottom: 4 }}>Titulo *</Text>
+            <TextInput
+              style={[styles.portfolioInput, { backgroundColor: theme.inputBg, color: theme.inputText, borderColor: theme.border }]}
+              value={portfolioTitle}
+              onChangeText={setPortfolioTitle}
+              placeholder="Ej: Instalacion electrica residencial"
+              placeholderTextColor={theme.inputPlaceholder}
+            />
+            <Text variant="caption" muted style={{ marginTop: spacing[3], marginBottom: 4 }}>Descripcion (opcional)</Text>
+            <TextInput
+              style={[styles.portfolioInput, { backgroundColor: theme.inputBg, color: theme.inputText, borderColor: theme.border }]}
+              value={portfolioDescription}
+              onChangeText={setPortfolioDescription}
+              placeholder="Cuenta brevemente de que se trato el trabajo"
+              placeholderTextColor={theme.inputPlaceholder}
+              multiline
+              numberOfLines={2}
+            />
+            <Button
+              label={savingPortfolio ? 'Subiendo...' : 'Guardar'}
+              variant="gradient"
+              icon="cloud-upload-outline"
+              fullWidth
+              disabled={savingPortfolio}
+              onPress={savePortfolioItem}
+              style={{ marginTop: spacing[4] }}
+            />
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -282,6 +422,12 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing[3] },
   toggleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   skillItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing[3] },
+  portfolioGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] },
+  portfolioItem: { width: '31%', aspectRatio: 1, borderRadius: radius.md, overflow: 'hidden', position: 'relative' },
+  portfolioImg: { width: '100%', height: '100%' },
+  portfolioRemove: { position: 'absolute', top: 4, right: 4, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 10 },
+  portfolioPreview: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius.lg, marginTop: spacing[2] },
+  portfolioInput: { borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, borderWidth: 1.5 },
   navRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[3] },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   modalContent: { borderTopLeftRadius: radius['2xl'], borderTopRightRadius: radius['2xl'], padding: spacing[5], maxHeight: '72%' },
