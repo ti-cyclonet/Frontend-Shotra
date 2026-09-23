@@ -1,19 +1,38 @@
 import { View, FlatList, StyleSheet } from 'react-native';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { api } from '../../src/services/api';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { Text, PressableCard, IconChip, CountDot, spacing, radius } from '../../src/components/ui';
 
+const POLL_INTERVAL_MS = 5000;
+
 export default function MessagesScreen() {
   const { theme } = useTheme();
   const [conversations, setConversations] = useState<any[]>([]);
+  const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const loadConversations = useCallback(() => {
+    // El backend ya devuelve las conversaciones ordenadas de la más
+    // reciente a la más antigua (por lastMessage.createdAt).
+    api.get('/messaging/conversations').then(setConversations).catch(() => {});
+  }, []);
+
+  // Mientras la pantalla está enfocada, refresca cada 5s (silencioso, sin
+  // spinner) para reflejar mensajes nuevos y reordenar la lista casi en
+  // tiempo real. Se detiene al salir de la pantalla.
   useFocusEffect(
     useCallback(() => {
-      api.get('/messaging/conversations').then(setConversations).catch(() => {});
-    }, []),
+      loadConversations();
+      pollTimer.current = setInterval(loadConversations, POLL_INTERVAL_MS);
+      return () => {
+        if (pollTimer.current) {
+          clearInterval(pollTimer.current);
+          pollTimer.current = null;
+        }
+      };
+    }, [loadConversations]),
   );
 
   return (
