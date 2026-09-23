@@ -38,7 +38,7 @@ export default function MessagesScreen() {
             >
               <IconChip icon="person" color="slate" size={46} rounded={radius.pill} />
               <View style={styles.cardContent}>
-                <Text variant="bodyStrong">{item.lastMessage?.sender?.displayName || 'Usuario'}</Text>
+                <Text variant="bodyStrong">{item.otherParty?.displayName || 'Usuario'}</Text>
                 <Text variant="caption" muted numberOfLines={1} style={{ marginTop: 2 }}>
                   {item.closed ? 'Trabajo finalizado' : item.lastMessage?.content}
                 </Text>
