@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Modal } from 'react-native';
 import { useState, useEffect } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,6 +21,7 @@ export default function RequestDetailScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   const [myProfileId, setMyProfileId] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -106,6 +107,7 @@ export default function RequestDetailScreen() {
   }
 
   return (
+    <>
     <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={styles.content}>
       {/* Header con botón volver */}
       <TouchableOpacity style={styles.backButton} onPress={() => router.canGoBack() ? router.back() : router.push('/(tabs)/feed')}>
@@ -232,6 +234,15 @@ export default function RequestDetailScreen() {
               {p.provider?.averageRating > 0 && (
                 <Text style={styles.providerRating}>★ {p.provider.averageRating.toFixed(1)} · {p.provider.completedJobs} trabajos</Text>
               )}
+              {p.provider?.portfolio?.length > 0 && (
+                <View style={styles.offerImagesRow}>
+                  {p.provider.portfolio.map((img: any) => (
+                    <TouchableOpacity key={img.id} onPress={() => setPreviewImage(img.imageUrl)}>
+                      <Image source={{ uri: img.imageUrl }} style={styles.offerImage} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
               {p.provider?.id && (
                 <TouchableOpacity
                   style={[styles.viewProfileBtn, { borderColor: theme.accent }]}
@@ -326,6 +337,14 @@ export default function RequestDetailScreen() {
         </View>
       )}
     </ScrollView>
+
+    {/* Vista ampliada de una imagen de oferta */}
+    <Modal visible={!!previewImage} transparent animationType="fade" onRequestClose={() => setPreviewImage(null)}>
+      <TouchableOpacity style={styles.previewOverlay} activeOpacity={1} onPress={() => setPreviewImage(null)}>
+        {previewImage && <Image source={{ uri: previewImage }} style={styles.previewImg} resizeMode="contain" />}
+      </TouchableOpacity>
+    </Modal>
+    </>
   );
 }
 
@@ -366,6 +385,10 @@ const styles = StyleSheet.create({
   providerRating: { color: '#f39c12', fontSize: 12, marginTop: 4 },
   viewProfileBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: 8, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1 },
   viewProfileBtnText: { fontSize: 12, fontWeight: '700' },
+  offerImagesRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  offerImage: { width: 64, height: 64, borderRadius: 8 },
+  previewOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center' },
+  previewImg: { width: '100%', height: '80%' },
   // CTA
   proposalButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, padding: 16, marginBottom: 20 },
   proposalButtonText: { fontSize: 16, fontWeight: '800' },
