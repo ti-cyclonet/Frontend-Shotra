@@ -23,6 +23,10 @@ export default function RequestDetailScreen() {
   const [myProfileId, setMyProfileId] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
+  // Fotos de mi portafolio para elegir cuáles mostrar en ESTA propuesta (máx. 3)
+  const [myPortfolio, setMyPortfolio] = useState<any[]>([]);
+  const [selectedImageIds, setSelectedImageIds] = useState<string[]>([]);
+
   useEffect(() => {
     if (id) {
       api.get(`/requests/${id}`)
@@ -30,9 +34,28 @@ export default function RequestDetailScreen() {
         .catch(() => alertDialog('Error', 'No se pudo cargar la solicitud'))
         .finally(() => setLoading(false));
     }
-    // Obtener mi perfil para saber si soy el solicitante
-    api.get('/profiles/me').then((p: any) => setMyProfileId(p?.id)).catch(() => {});
+    // Obtener mi perfil para saber si soy el solicitante, y traer mi
+    // portafolio para poder elegir fotos al enviar una propuesta. Se
+    // preseleccionan las que ya marqué como "mostrar en mi oferta" por
+    // defecto (editable antes de enviar).
+    api.get('/profiles/me').then((p: any) => {
+      setMyProfileId(p?.id);
+      const portfolio = p?.portfolio || [];
+      setMyPortfolio(portfolio);
+      setSelectedImageIds(portfolio.filter((i: any) => i.showInOffer).slice(0, 3).map((i: any) => i.id));
+    }).catch(() => {});
   }, [id]);
+
+  const toggleImageSelection = (itemId: string) => {
+    setSelectedImageIds((prev) => {
+      if (prev.includes(itemId)) return prev.filter((i) => i !== itemId);
+      if (prev.length >= 3) {
+        alertDialog('Límite alcanzado', 'Puedes elegir hasta 3 fotos para esta oferta.');
+        return prev;
+      }
+      return [...prev, itemId];
+    });
+  };
 
   const acceptProposal = async (proposalId: string) => {
     const ok = await confirmDialog(
@@ -85,6 +108,7 @@ export default function RequestDetailScreen() {
         price: parseFloat(price),
         description,
         estimatedTime: estimatedTime || undefined,
+        imageIds: selectedImageIds.length > 0 ? selectedImageIds : undefined,
       });
       alertDialog('Propuesta enviada', 'El solicitante revisara tu propuesta y te notificara.');
       setShowProposalForm(false);
@@ -326,6 +350,31 @@ export default function RequestDetailScreen() {
             placeholderTextColor={theme.inputPlaceholder}
           />
 
+          <Text style={[styles.label, { color: theme.textMuted }]}>Fotos para esta oferta (opcional, máx. 3)</Text>
+          {myPortfolio.length > 0 ? (
+            <View style={styles.imagePickerRow}>
+              {myPortfolio.map((item: any) => {
+                const selected = selectedImageIds.includes(item.id);
+                return (
+                  <TouchableOpacity key={item.id} onPress={() => toggleImageSelection(item.id)} style={styles.imagePickerItem}>
+                    <Image source={{ uri: item.imageUrl }} style={[styles.imagePickerThumb, selected && { borderColor: theme.accent, borderWidth: 3 }]} />
+                    {selected && (
+                      <View style={[styles.imagePickerCheck, { backgroundColor: theme.accent }]}>
+                        <Ionicons name="checkmark" size={12} color={theme.accentText} />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ) : (
+            <TouchableOpacity onPress={() => router.push('/portfolio-settings')}>
+              <Text style={{ color: theme.accent, fontSize: 12, marginTop: 4 }}>
+                Aún no tienes fotos cargadas. Toca aquí para agregar algunas.
+              </Text>
+            </TouchableOpacity>
+          )}
+
           <View style={styles.formActions}>
             <TouchableOpacity style={[styles.cancelButton, { borderColor: theme.border }]} onPress={() => setShowProposalForm(false)}>
               <Text style={[styles.cancelButtonText, { color: theme.textMuted }]}>Cancelar</Text>
@@ -389,6 +438,10 @@ const styles = StyleSheet.create({
   offerImage: { width: 64, height: 64, borderRadius: 8 },
   previewOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center' },
   previewImg: { width: '100%', height: '80%' },
+  imagePickerRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6 },
+  imagePickerItem: { position: 'relative' },
+  imagePickerThumb: { width: 64, height: 64, borderRadius: 8, borderWidth: 1, borderColor: 'transparent' },
+  imagePickerCheck: { position: 'absolute', top: -4, right: -4, width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   // CTA
   proposalButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, padding: 16, marginBottom: 20 },
   proposalButtonText: { fontSize: 16, fontWeight: '800' },
