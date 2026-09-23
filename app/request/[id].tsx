@@ -57,6 +57,17 @@ export default function RequestDetailScreen() {
     });
   };
 
+  // El perfil público de un ofertante (portafolio + comentarios) solo debe
+  // poder verse mientras hay un contrato ACTIVO con ese ofertante en esta
+  // solicitud: ni antes (mientras solo se comparan ofertas pendientes) ni
+  // después de que el contrato ya finalizó.
+  const ACTIVE_CONTRACT_STATUSES = ['PENDING', 'SIGNED', 'IN_PROGRESS', 'PENDING_CONFIRMATION', 'DISPUTED'];
+  const isProviderProfileAccessible = (providerId: string): boolean => {
+    const contract = request?.contract;
+    if (!contract) return false;
+    return contract.providerId === providerId && ACTIVE_CONTRACT_STATUSES.includes(contract.status);
+  };
+
   const acceptProposal = async (proposalId: string) => {
     const ok = await confirmDialog(
       'Aceptar propuesta',
@@ -239,7 +250,8 @@ export default function RequestDetailScreen() {
               <View style={styles.proposalHeader}>
                 <TouchableOpacity
                   style={styles.providerRow}
-                  onPress={() => p.provider?.id && router.push(`/provider/${p.provider.id}`)}
+                  disabled={!p.provider?.id || !isProviderProfileAccessible(p.provider.id)}
+                  onPress={() => router.push(`/provider/${p.provider.id}`)}
                 >
                   {/* Avatar del ofertante (o ícono si no tiene foto) */}
                   <View style={[styles.providerAvatar, glass.chip]}>
@@ -258,16 +270,20 @@ export default function RequestDetailScreen() {
               {p.provider?.averageRating > 0 && (
                 <Text style={styles.providerRating}>★ {p.provider.averageRating.toFixed(1)} · {p.provider.completedJobs} trabajos</Text>
               )}
-              {p.provider?.portfolio?.length > 0 && (
+              {p.images?.length > 0 && (
                 <View style={styles.offerImagesRow}>
-                  {p.provider.portfolio.map((img: any) => (
+                  {p.images.map((img: any) => (
                     <TouchableOpacity key={img.id} onPress={() => setPreviewImage(img.imageUrl)}>
                       <Image source={{ uri: img.imageUrl }} style={styles.offerImage} />
                     </TouchableOpacity>
                   ))}
                 </View>
               )}
-              {p.provider?.id && (
+              {/* El perfil del ofertante (portafolio + comentarios) solo es visible
+                  mientras hay un contrato ACTIVO con ese ofertante puntual — no
+                  antes (mientras solo se comparan ofertas) ni después de que el
+                  contrato finaliza. */}
+              {p.provider?.id && isProviderProfileAccessible(p.provider.id) && (
                 <TouchableOpacity
                   style={[styles.viewProfileBtn, { borderColor: theme.accent }]}
                   onPress={() => router.push(`/provider/${p.provider.id}`)}
