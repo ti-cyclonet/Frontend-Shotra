@@ -259,6 +259,26 @@ export default function ContractDetailScreen() {
         </View>
       </View>
 
+      {/* Chat: habilitado cuando ambas partes firmaron (mismo criterio que en
+          el detalle de la solicitud); se deja visible pero deshabilitado
+          cuando el trabajo ya quedó Completado/Evaluado, en vez de ocultarse. */}
+      {bothSigned && (isRequester || isProvider) && (() => {
+        const chatClosed = contract.status === 'COMPLETED' || contract.status === 'EVALUATED';
+        return (
+          <TouchableOpacity
+            style={[styles.chatButton, { backgroundColor: chatClosed ? theme.textMuted : theme.accent }]}
+            disabled={chatClosed}
+            onPress={() => router.push(`/chat/${contract.requestId}`)}
+          >
+            <Ionicons name="chatbubbles" size={18} color="#fff" />
+            <Text style={styles.chatButtonText}>
+              {chatClosed ? 'Chat (trabajo finalizado)' : `Chat con ${otherPartyName}`}
+            </Text>
+            {!chatClosed && <Ionicons name="chevron-forward" size={18} color="#fff" />}
+          </TouchableOpacity>
+        );
+      })()}
+
       {/* Propuesta acordada */}
       {contract.proposal?.description && (
         <View style={[styles.card, glass.card]}>
@@ -451,6 +471,8 @@ const styles = StyleSheet.create({
   backButton: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 20 },
   backText: { color: '#fff', fontSize: 15, fontWeight: '600' },
   card: { borderRadius: 16, padding: 18, marginBottom: 16 },
+  chatButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, padding: 14, marginBottom: 16 },
+  chatButtonText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   code: { fontSize: 15, fontWeight: '800', letterSpacing: 0.5 },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },

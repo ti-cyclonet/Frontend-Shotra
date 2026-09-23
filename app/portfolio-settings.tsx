@@ -1,5 +1,6 @@
 import {
   View, StyleSheet, TouchableOpacity, ScrollView, Modal, Image, ActivityIndicator, TextInput,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useState, useCallback } from 'react';
@@ -200,7 +201,7 @@ export default function PortfolioSettingsScreen() {
 
       {/* Modal titular/describir la foto antes de subirla */}
       <Modal visible={showAddModal} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
             <View style={[styles.modalHandle, { backgroundColor: theme.glassBorder }]} />
             <View style={styles.modalHeader}>
@@ -209,36 +210,38 @@ export default function PortfolioSettingsScreen() {
                 <Ionicons name="close" size={24} color={theme.text} />
               </TouchableOpacity>
             </View>
-            {pendingAsset?.uri && <Image source={{ uri: pendingAsset.uri }} style={styles.previewThumb} />}
-            <Text variant="caption" muted style={{ marginTop: spacing[3], marginBottom: 4 }}>Título *</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: theme.inputBg, color: theme.inputText, borderColor: theme.border }]}
-              value={title}
-              onChangeText={setTitle}
-              placeholder="Ej: Instalación eléctrica residencial"
-              placeholderTextColor={theme.inputPlaceholder}
-            />
-            <Text variant="caption" muted style={{ marginTop: spacing[3], marginBottom: 4 }}>Descripción (opcional)</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: theme.inputBg, color: theme.inputText, borderColor: theme.border }]}
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Cuenta brevemente de qué se trató el trabajo"
-              placeholderTextColor={theme.inputPlaceholder}
-              multiline
-              numberOfLines={2}
-            />
-            <Button
-              label={saving ? 'Subiendo...' : 'Guardar'}
-              variant="gradient"
-              icon="cloud-upload-outline"
-              fullWidth
-              disabled={saving}
-              onPress={saveItem}
-              style={{ marginTop: spacing[4] }}
-            />
+            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              {pendingAsset?.uri && <Image source={{ uri: pendingAsset.uri }} style={styles.previewThumb} />}
+              <Text variant="caption" muted style={{ marginTop: spacing[3], marginBottom: 4 }}>Título *</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: theme.inputBg, color: theme.inputText, borderColor: theme.border }]}
+                value={title}
+                onChangeText={setTitle}
+                placeholder="Ej: Instalación eléctrica residencial"
+                placeholderTextColor={theme.inputPlaceholder}
+              />
+              <Text variant="caption" muted style={{ marginTop: spacing[3], marginBottom: 4 }}>Descripción (opcional)</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: theme.inputBg, color: theme.inputText, borderColor: theme.border }]}
+                value={description}
+                onChangeText={setDescription}
+                placeholder="Cuenta brevemente de qué se trató el trabajo"
+                placeholderTextColor={theme.inputPlaceholder}
+                multiline
+                numberOfLines={2}
+              />
+              <Button
+                label={saving ? 'Subiendo...' : 'Guardar'}
+                variant="gradient"
+                icon="cloud-upload-outline"
+                fullWidth
+                disabled={saving}
+                onPress={saveItem}
+                style={{ marginTop: spacing[4], marginBottom: spacing[2] }}
+              />
+            </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Vista ampliada */}
