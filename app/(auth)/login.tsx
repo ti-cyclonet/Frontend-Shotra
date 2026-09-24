@@ -76,16 +76,15 @@ export default function LoginScreen() {
   const themeTranslate = themeAnim.interpolate({ inputRange: [0, 1], outputRange: [30, 0] });
   const shakeX = shake.interpolate({ inputRange: [-1, 1], outputRange: [-8, 8] });
 
-  // Logo sobre la banda de color de marca, elegido por contraste con la banda:
-  //   Carmesi (banda negra) -> logo rojo
-  //   Claro / Negro         -> logo gris
-  const logoSource = themeKey === 'crimson'
-    ? require('../../assets/logo_rojo.png')
-    : require('../../assets/logo_gris.png');
+  // Banda superior y boton principal (estilo Kiri): el acento de marca del
+  // tema. En Carmesi se usa el rojo oscuro del tema Claro (y su logo), que
+  // luce mejor que el rojo vivo del acento; el resto del tema no cambia.
+  const brand = themeKey === 'crimson' ? THEMES.graphite : theme;
+  const bandColor = brand.accent;
+  const onBand = brand.accentText;
 
-  // Color de la banda superior (estilo Kiri): el acento de marca del tema.
-  const bandColor = theme.accent;
-  const onBand = theme.accentText;
+  // Logo gris: contrasta con la banda roja oscura (Claro/Carmesi) y la gris (Negro)
+  const logoSource = require('../../assets/logo_gris.png');
 
   return (
     <KeyboardAvoidingView
@@ -189,18 +188,18 @@ export default function LoginScreen() {
 
           <Animated.View style={{ transform: [{ scale: btnScale }] }}>
             <Pressable
-              style={[styles.button, { backgroundColor: theme.accent }]}
+              style={[styles.button, { backgroundColor: brand.accent }]}
               onPress={handleLogin}
               onPressIn={pressIn}
               onPressOut={pressOut}
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator color={theme.accentText} />
+                <ActivityIndicator color={brand.accentText} />
               ) : (
                 <>
-                  <Ionicons name="log-in-outline" size={20} color={theme.accentText} />
-                  <Text style={[styles.buttonText, { color: theme.accentText }]}>Iniciar Sesion</Text>
+                  <Ionicons name="log-in-outline" size={20} color={brand.accentText} />
+                  <Text style={[styles.buttonText, { color: brand.accentText }]}>Iniciar Sesion</Text>
                 </>
               )}
             </Pressable>
