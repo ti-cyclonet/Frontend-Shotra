@@ -95,32 +95,34 @@ export const THEMES: Record<ThemeKey, Theme> = {
   crimson: {
     key: 'crimson',
     label: 'Carmesi',
-    // Fondo carmesi profundo; las superficies/tarjetas usan tintes OSCUROS (no
-    // rojo-sobre-rojo) para dar jerarquia y contraste — antes todo se veia plano.
-    background: '#7a0000',
-    surface: '#5c0000',
-    surfaceAlt: '#4a0000',
-    border: 'rgba(0,0,0,0.35)',
+    // Mismo lenguaje visual que el tema Negro (canvas casi negro + superficies
+    // elevadas + bordes con "iluminacion" de contorno, estilo AWS/GitHub dark)
+    // pero reteñido en rojo: canvas carmesi muy oscuro, tarjetas rojo-oscuro
+    // elevadas, y el brillo de bordes/textos en rojo vivo en vez de gris/morado.
+    background: '#1f0000',
+    surface: '#3a0808',
+    surfaceAlt: '#4a0f0f',
+    border: 'rgba(255,68,68,0.28)',
     text: '#ffffff',
-    textMuted: '#f0bcbc',
-    inputBg: '#ffffff',
-    inputText: '#1a1a1a',
-    inputPlaceholder: '#999999',
-    accent: '#141414',
+    textMuted: '#e2a0a0',
+    inputBg: '#3a0808',
+    inputText: '#ffffff',
+    inputPlaceholder: '#c98888',
+    accent: '#ff4444',
     accentText: '#ffffff',
-    accentDark: '#000000',
-    accentSoft: 'rgba(0,0,0,0.24)',
-    danger: '#ffb3b3',
-    success: '#7ee0d8',
-    warning: '#ffd166',
-    tabBar: 'rgba(0,0,0,0.4)',
+    accentDark: '#b91c1c',
+    accentSoft: 'rgba(255,68,68,0.16)',
+    danger: '#ff6b6b',
+    success: '#4ade80',
+    warning: '#fbbf24',
+    tabBar: '#150000',
     swatch: '#990000',
-    // Tarjetas como paneles oscuros translucidos sobre el carmesi (profundidad),
-    // en vez del blanco-translucido que las dejaba "rojo lavado".
-    glass: 'rgba(0,0,0,0.22)',
-    glassStrong: 'rgba(0,0,0,0.32)',
-    glassBorder: 'rgba(0,0,0,0.3)',
-    glassHighlight: 'rgba(255,255,255,0.12)',
+    // Glow rojo en vez de blanco: mismo patron de elevacion que el tema Negro,
+    // con el brillo de borde/highlight tintado en rojo vivo.
+    glass: 'rgba(255,68,68,0.07)',
+    glassStrong: 'rgba(255,68,68,0.13)',
+    glassBorder: 'rgba(255,68,68,0.35)',
+    glassHighlight: 'rgba(255,140,140,0.4)',
   },
 };
 
