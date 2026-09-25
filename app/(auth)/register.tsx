@@ -8,13 +8,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/context/AuthContext';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { alertDialog } from '../../src/services/dialog';
+import { LEGAL_VERSIONS } from '../../src/legal/shotra-legal';
 
-// Tipos de documento (persona natural) sincronizados con Authoriza
+// Tipos de documento sincronizados con el catálogo de Authoriza
+// (document_types: Pasaporte = 'PP'). Sin Tarjeta de identidad: SHOTRA es
+// solo para mayores de 18 años.
 const DOC_TYPES = [
   { key: 'CC', label: 'Cédula de ciudadanía' },
   { key: 'CE', label: 'Cédula de extranjería' },
-  { key: 'TI', label: 'Tarjeta de identidad' },
-  { key: 'PA', label: 'Pasaporte' },
+  { key: 'PP', label: 'Pasaporte' },
   { key: 'NIT', label: 'NIT' },
 ];
 
@@ -38,6 +40,17 @@ const CIVIL_STATUSES = [
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const birthdateRegex = /^\d{4}-\d{2}-\d{2}$/;
 
+/** Edad cumplida a hoy para AAAA-MM-DD (NaN si la fecha no es válida). */
+function ageFrom(birthdate: string): number {
+  const b = new Date(`${birthdate}T00:00:00`);
+  if (isNaN(b.getTime())) return NaN;
+  const now = new Date();
+  let age = now.getFullYear() - b.getFullYear();
+  const m = now.getMonth() - b.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--;
+  return age;
+}
+
 export default function RegisterScreen() {
   const { register } = useAuth();
   const { theme } = useTheme();
@@ -60,6 +73,9 @@ export default function RegisterScreen() {
   const [civilPickerOpen, setCivilPickerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptHabeasData, setAcceptHabeasData] = useState(false);
+  const consentsAccepted = acceptTerms && acceptHabeasData;
 
   const inputStyle = { backgroundColor: theme.inputBg, color: theme.inputText, borderColor: theme.border };
 
@@ -68,12 +84,16 @@ export default function RegisterScreen() {
     if (!firstSurname.trim()) return 'Ingresa tu primer apellido';
     if (!documentNumber.trim()) return 'Ingresa tu número de documento';
     if (!birthdate.trim() || !birthdateRegex.test(birthdate.trim())) return 'Ingresa tu fecha de nacimiento (AAAA-MM-DD)';
+    const age = ageFrom(birthdate.trim());
+    if (isNaN(age)) return 'La fecha de nacimiento no es válida';
+    if (age < 18) return 'Debes ser mayor de 18 años para registrarte en SHOTRA';
     if (!gender) return 'Selecciona tu sexo';
     if (!civilStatus) return 'Selecciona tu estado civil';
     if (!phone.trim()) return 'Ingresa tu teléfono';
     if (!emailRegex.test(email.trim())) return 'Ingresa un correo válido';
     if (password.length < 8) return 'La contraseña debe tener al menos 8 caracteres';
     if (password !== confirm) return 'Las contraseñas no coinciden';
+    if (!consentsAccepted) return 'Debes aceptar los Términos y Condiciones y autorizar el tratamiento de tus datos personales';
     return null;
   };
 
@@ -96,6 +116,10 @@ export default function RegisterScreen() {
         birthdate: birthdate.trim(),
         gender,
         civilStatus,
+        acceptTerms,
+        acceptHabeasData,
+        termsVersion: LEGAL_VERSIONS.terms,
+        habeasDataVersion: LEGAL_VERSIONS.habeasData,
       });
       setDone(true);
       if (res.verificationRequired === false) {
@@ -226,7 +250,26 @@ export default function RegisterScreen() {
         <Text style={[styles.label, { color: theme.textMuted }]}>Confirmar contraseña *</Text>
         <TextInput style={[styles.input, inputStyle]} value={confirm} onChangeText={setConfirm} placeholder="Repite tu contraseña" placeholderTextColor={theme.inputPlaceholder} secureTextEntry />
 
-        <Pressable style={[styles.button, { backgroundColor: theme.accent, marginTop: 24 }]} onPress={handleRegister} disabled={loading}>
+        {/* Aceptación obligatoria: Términos de SHOTRA + autorización de datos */}
+        <View style={styles.consents}>
+          <Pressable style={styles.consentRow} onPress={() => setAcceptTerms(!acceptTerms)} accessibilityRole="checkbox" accessibilityState={{ checked: acceptTerms }}>
+            <Ionicons name={acceptTerms ? 'checkbox' : 'square-outline'} size={22} color={acceptTerms ? theme.accent : theme.textMuted} />
+            <Text style={[styles.consentText, { color: theme.textMuted }]}>
+              Acepto los{' '}
+              <Text style={[styles.consentLink, { color: theme.accent }]} onPress={() => router.push({ pathname: '/(auth)/legal', params: { doc: 'terms' } })}>Términos y Condiciones de SHOTRA</Text>.
+            </Text>
+          </Pressable>
+          <Pressable style={styles.consentRow} onPress={() => setAcceptHabeasData(!acceptHabeasData)} accessibilityRole="checkbox" accessibilityState={{ checked: acceptHabeasData }}>
+            <Ionicons name={acceptHabeasData ? 'checkbox' : 'square-outline'} size={22} color={acceptHabeasData ? theme.accent : theme.textMuted} />
+            <Text style={[styles.consentText, { color: theme.textMuted }]}>
+              Autorizo el{' '}
+              <Text style={[styles.consentLink, { color: theme.accent }]} onPress={() => router.push({ pathname: '/(auth)/legal', params: { doc: 'habeasData' } })}>tratamiento de mis datos personales</Text>
+              {' '}por CycloNet S.A.S. (Ley 1581 de 2012).
+            </Text>
+          </Pressable>
+        </View>
+
+        <Pressable style={[styles.button, { backgroundColor: theme.accent, marginTop: 20, opacity: consentsAccepted ? 1 : 0.5 }]} onPress={handleRegister} disabled={loading || !consentsAccepted}>
           {loading ? <ActivityIndicator color={theme.accentText} /> : (
             <>
               <Ionicons name="person-add-outline" size={18} color={theme.accentText} />
@@ -263,6 +306,10 @@ const styles = StyleSheet.create({
   docItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(128,128,128,0.2)' },
   button: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 12, padding: 16 },
   buttonText: { fontSize: 16, fontWeight: '800' },
+  consents: { marginTop: 20, gap: 12 },
+  consentRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  consentText: { flex: 1, fontSize: 13, lineHeight: 19 },
+  consentLink: { fontWeight: '800', textDecorationLine: 'underline' },
   loginLink: { alignItems: 'center', marginTop: 20 },
   loginText: { fontSize: 14 },
   // done
