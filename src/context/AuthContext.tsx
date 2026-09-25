@@ -35,6 +35,11 @@ export interface RegisterData {
   birthdate?: string;
   gender?: string;
   civilStatus?: string;
+  // Aceptación de Términos de SHOTRA y autorización de datos (Ley 1581/2012)
+  acceptTerms: boolean;
+  acceptHabeasData: boolean;
+  termsVersion: string;
+  habeasDataVersion: string;
 }
 
 interface AuthContextValue {
