@@ -255,8 +255,13 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     if (!isAuthenticated) return;
     (async () => {
       try {
+        // El permiso se pide igual: lo necesitan el badge y las notificaciones
+        // locales que se publican mientras la app está abierta.
         const { status } = await Notifications.requestPermissionsAsync();
         if (status !== 'granted') return;
+        // Sin push remoto (predeterminado) no se registra el token: así no
+        // llegan notificaciones con la app cerrada. Ver SHOTRA_REMOTE_PUSH.
+        if (process.env.EXPO_PUBLIC_REMOTE_PUSH !== 'true') return;
 
         const projectId = Constants.expoConfig?.extra?.eas?.projectId;
         const { data: token } = await Notifications.getExpoPushTokenAsync(
@@ -309,6 +314,9 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       setItems([]);
       setUnread(0);
       setBanner(null);
+      // Sin sesión no debe quedar nada del usuario anterior en la bandeja ni en el badge
+      Notifications.dismissAllNotificationsAsync().catch(() => {});
+      Notifications.setBadgeCountAsync(0).catch(() => {});
       return;
     }
     refresh();
