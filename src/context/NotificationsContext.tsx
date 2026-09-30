@@ -68,6 +68,7 @@ const META_BY_TYPE: Record<string, { icon: any; color: string }> = {
   CONTRACT_COMPLETED: { icon: 'checkmark-done', color: '#2ecc71' },
   NEW_RATING: { icon: 'star', color: '#f39c12' },
   NEW_MESSAGE: { icon: 'chatbubble-ellipses', color: '#9b59b6' },
+  REQUEST_EXPIRED: { icon: 'time', color: '#95a5a6' },
 };
 
 const DEFAULT_META = { icon: 'notifications', color: '#4ecdc4' };
@@ -183,7 +184,12 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         // número arbitrario. `identifier: n.id` hace que reposteos del mismo
         // id (ej. sigue sin leerse en la próxima apertura) reemplacen la
         // entrada en vez de duplicarla.
+        // Las que llegaron por push (app minimizada o cerrada) ya están en la
+        // bandeja: no se publican otra vez al volver a la app.
+        const presented = await Notifications.getPresentedNotificationsAsync().catch(() => []);
+        const inTray = new Set(presented.map((p) => (p.request.content.data as any)?.notificationId).filter(Boolean));
         for (const n of freshUnread) {
+          if (inTray.has(n.id)) continue;
           Notifications.scheduleNotificationAsync({
             identifier: n.id,
             content: {
@@ -259,9 +265,9 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         // locales que se publican mientras la app está abierta.
         const { status } = await Notifications.requestPermissionsAsync();
         if (status !== 'granted') return;
-        // Sin push remoto (predeterminado) no se registra el token: así no
-        // llegan notificaciones con la app cerrada. Ver SHOTRA_REMOTE_PUSH.
-        if (process.env.EXPO_PUBLIC_REMOTE_PUSH !== 'true') return;
+        // Push remoto activo por defecto (llega con la app minimizada o
+        // cerrada); EXPO_PUBLIC_REMOTE_PUSH=false lo desactiva en un build.
+        if (process.env.EXPO_PUBLIC_REMOTE_PUSH === 'false') return;
 
         const projectId = Constants.expoConfig?.extra?.eas?.projectId;
         const { data: token } = await Notifications.getExpoPushTokenAsync(

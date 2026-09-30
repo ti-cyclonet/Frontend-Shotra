@@ -15,15 +15,29 @@ const CANCELABLE = ['PUBLISHED', 'IN_PROPOSALS', 'DRAFT'];
 // Mapea el estado a un color de chip semantico del design system
 const statusChip: Record<string, 'teal' | 'amber' | 'green' | 'blue' | 'red' | 'neutral'> = {
   PUBLISHED: 'teal', IN_PROPOSALS: 'amber', ACCEPTED: 'green',
-  IN_PROGRESS: 'blue', COMPLETED: 'blue', CANCELLED: 'red',
+  IN_PROGRESS: 'blue', COMPLETED: 'blue', CANCELLED: 'red', EXPIRED: 'neutral',
   PENDING: 'amber', REJECTED: 'red', WITHDRAWN: 'neutral',
 };
 
 const statusLabel: Record<string, string> = {
   PENDING: 'Pendiente', ACCEPTED: 'Aceptada', REJECTED: 'Rechazada', WITHDRAWN: 'Retirada',
   PUBLISHED: 'Publicada', IN_PROPOSALS: 'Con propuestas', IN_PROGRESS: 'En progreso',
-  COMPLETED: 'Completada', CANCELLED: 'Cancelada',
+  COMPLETED: 'Completada', CANCELLED: 'Cancelada', EXPIRED: 'Vencida',
 };
+
+/** Vencida: archivada, o ya pasada de plazo aunque el servidor aún no la archive. */
+const isExpired = (item: any) => item.status === 'EXPIRED' || !!item.expiredNow;
+
+/** "Vence en 5 h" / "Vence en 2 días" para las publicaciones abiertas. */
+function closesLabel(item: any): string | null {
+  if (!item.closesAt || isExpired(item)) return null;
+  const ms = new Date(item.closesAt).getTime() - Date.now();
+  if (ms <= 0) return null;
+  const h = Math.round(ms / 36e5);
+  if (h < 1) return 'Vence en menos de 1 h';
+  if (h < 48) return `Vence en ${h} h`;
+  return `Vence en ${Math.round(h / 24)} días`;
+}
 
 // Estado del CONTRATO → chip + etiqueta (para reflejar el ciclo real de la
 // propuesta aceptada, que el proposal.status no refleja porque se queda en ACCEPTED).
@@ -87,19 +101,44 @@ export default function ActivityScreen() {
     }
   }, [load]);
 
+  const republish = useCallback(async (item: any) => {
+    try {
+      await api.patch(`/requests/${item.id}/republish`, {});
+      await alertDialog('Publicada de nuevo', `"${item.title}" vuelve a recibir ofertas.`, 'success');
+      load();
+    } catch (e: any) {
+      await alertDialog('No se pudo volver a publicar', e?.message || 'Intenta de nuevo.', 'danger');
+    }
+  }, [load]);
+
   const renderRequest = ({ item, index }: { item: any; index: number }) => (
     <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 55).springify().damping(16)}>
       <PressableCard padding={16} rounded={radius['2xl']} onPress={() => router.push(`/request/${item.id}`)} style={styles.card}>
         <View style={styles.row}>
           <Text variant="cardTitle" style={{ flex: 1, marginRight: spacing[2] }} numberOfLines={1}>{item.title}</Text>
-          <Badge label={statusLabel[item.status] || item.status} color={statusChip[item.status] || 'neutral'} />
+          <Badge
+            label={isExpired(item) ? 'Vencida' : statusLabel[item.status] || item.status}
+            color={isExpired(item) ? 'neutral' : statusChip[item.status] || 'neutral'}
+          />
         </View>
-        <Text variant="caption" muted style={{ marginTop: 4 }}>{item.category?.name}</Text>
+        <Text variant="caption" muted style={{ marginTop: 4 }}>
+          {item.category?.name}{closesLabel(item) ? ` · ${closesLabel(item)}` : ''}
+        </Text>
         <View style={[styles.footerRow, { borderTopColor: theme.glassBorder }]}>
           <IconChip icon="people-outline" color="red" size={30} />
           <Text variant="captionStrong" color={theme.accent}>{item._count?.proposals || 0} propuestas recibidas</Text>
         </View>
-        {CANCELABLE.includes(item.status) && (
+        {isExpired(item) && !item.contract && (
+          <Button
+            label="Volver a publicar"
+            variant="outline"
+            size="sm"
+            icon="refresh-outline"
+            onPress={() => republish(item)}
+            style={{ marginTop: spacing[3] }}
+          />
+        )}
+        {CANCELABLE.includes(item.status) && !isExpired(item) && (
           <Button
             label="Cancelar solicitud"
             variant="outline"

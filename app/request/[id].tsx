@@ -211,6 +211,24 @@ export default function RequestDetailScreen() {
         </View>
       </View>
 
+      {/* Vencimiento: aviso si venció, o cuánto le queda si sigue abierta */}
+      {(request.status === 'EXPIRED' || request.expiredNow) ? (
+        <View style={[styles.expiryBanner, { backgroundColor: theme.glassBorder }]}>
+          <Ionicons name="time-outline" size={18} color={theme.textMuted} />
+          <Text style={[styles.expiryText, { color: theme.text }]}>
+            Esta publicación venció y ya no recibe propuestas.
+            {myProfileId === request.requester?.id ? ' Puedes volver a publicarla desde Mis solicitudes.' : ''}
+          </Text>
+        </View>
+      ) : request.closesAt && new Date(request.closesAt).getTime() > Date.now() ? (
+        <View style={[styles.expiryBanner, { backgroundColor: theme.glassBorder }]}>
+          <Ionicons name="hourglass-outline" size={18} color={theme.accent} />
+          <Text style={[styles.expiryText, { color: theme.text }]}>
+            Recibe propuestas hasta el {new Date(request.closesAt).toLocaleString('es-CO', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}.
+          </Text>
+        </View>
+      ) : null}
+
       {/* Contrato generado */}
       {request.contract && (
         <TouchableOpacity style={[styles.contractButton, { backgroundColor: theme.success }]} onPress={() => router.push(`/contract/${request.contract.id}`)}>
@@ -326,7 +344,8 @@ export default function RequestDetailScreen() {
       {!showProposalForm
         && !request.contract
         && myProfileId !== request.requester?.id
-        && ['PUBLISHED', 'IN_PROPOSALS'].includes(request.status) && (
+        && ['PUBLISHED', 'IN_PROPOSALS'].includes(request.status)
+        && !request.expiredNow && (
         <TouchableOpacity style={[styles.proposalButton, { backgroundColor: theme.accent }]} onPress={() => setShowProposalForm(true)}>
           <Ionicons name="paper-plane" size={18} color={theme.accentText} />
           <Text style={[styles.proposalButtonText, { color: theme.accentText }]}>Enviar propuesta</Text>
@@ -466,6 +485,8 @@ const styles = StyleSheet.create({
   proposalButtonText: { fontSize: 16, fontWeight: '800' },
   contractButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, padding: 16, marginBottom: 20 },
   contractButtonText: { fontSize: 15, fontWeight: '800' },
+  expiryBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 14, padding: 12, marginBottom: 16 },
+  expiryText: { flex: 1, fontSize: 13, lineHeight: 18 },
   // Form
   formSection: { borderRadius: 16, padding: 18, marginBottom: 20, borderWidth: 1 },
   formTitle: { fontSize: 17, fontWeight: '800', marginBottom: 14 },
