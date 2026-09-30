@@ -190,7 +190,8 @@ export const api = {
   get: <T = any>(endpoint: string) => request<T>(endpoint, { method: 'GET' }),
   post: <T = any>(endpoint: string, body?: any) => request<T>(endpoint, { method: 'POST', body: JSON.stringify(body) }),
   patch: <T = any>(endpoint: string, body?: any) => request<T>(endpoint, { method: 'PATCH', body: JSON.stringify(body) }),
-  delete: <T = any>(endpoint: string) => request<T>(endpoint, { method: 'DELETE' }),
+  delete: <T = any>(endpoint: string, body?: any) =>
+    request<T>(endpoint, { method: 'DELETE', ...(body !== undefined ? { body: JSON.stringify(body) } : {}) }),
   upload,
   uploadAvatar,
   uploadPortfolioItem,

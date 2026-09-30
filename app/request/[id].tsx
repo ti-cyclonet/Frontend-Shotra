@@ -244,7 +244,10 @@ export default function RequestDetailScreen() {
       {/* Propuestas existentes */}
       {request.proposals?.length > 0 && (
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Propuestas ({request.proposals.length})</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            {/* Un ofertante solo recibe su propia propuesta (el backend filtra las demás) */}
+            {request.isRequester === false ? 'Tu propuesta' : `Propuestas (${request.proposals.length})`}
+          </Text>
           {request.proposals.map((p: any) => (
             <View key={p.id} style={[styles.proposalCard, glass.cardStrong]}>
               <View style={styles.proposalHeader}>

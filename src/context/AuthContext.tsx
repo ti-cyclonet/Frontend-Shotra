@@ -2,6 +2,8 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { router } from 'expo-router';
+import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 
 const TOKEN_KEY = 'shotra_auth_token';
 const AUTHORIZA_URL = process.env.EXPO_PUBLIC_AUTHORIZA_URL || 'http://localhost:3000/api';
@@ -121,9 +123,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function logout() {
+    // Antes de borrar la sesión (el DELETE necesita el token de acceso): el
+    // dispositivo deja de estar vinculado a esta cuenta, así no le siguen
+    // llegando sus notificaciones con otra cuenta o sin sesión.
+    await unlinkPushToken();
     await storage.removeItem(TOKEN_KEY);
     setUser(null);
     router.replace('/(auth)/login');
+  }
+
+  async function unlinkPushToken() {
+    if (Platform.OS === 'web') return;
+    try {
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status === 'granted') {
+        const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+        const { data: pushToken } = await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined);
+        const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4100/api';
+        const token = await storage.getItem(TOKEN_KEY);
+        if (token && pushToken) {
+          await fetch(`${API_URL}/push-tokens`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ token: pushToken }),
+          }).catch(() => {});
+        }
+      }
+    } catch {
+      // Sin permiso / sin token: no hay nada que desvincular
+    }
+    Notifications.dismissAllNotificationsAsync().catch(() => {});
+    Notifications.setBadgeCountAsync(0).catch(() => {});
   }
 
   return (
