@@ -82,7 +82,12 @@ interface ServiceRequest {
   isUrgent: boolean;
   address?: string;
   category: { name: string; icon?: string };
-  requester: { displayName: string; averageRating: number };
+  requester: {
+    displayName: string;
+    averageRating: number;
+    // Reputación como solicitante (claridad, pago, trato...)
+    reputation?: { rating: number; count: number; criteria: Record<string, number>; badges: string[] };
+  };
   _count?: { proposals: number };
   distance?: number;
   createdAt: string;
@@ -155,6 +160,15 @@ export default function FeedScreen() {
             <Text variant="bodyStrong" color={theme.accent}>{formatBudget(item.budgetMin, item.budgetMax)}</Text>
           </View>
           <View style={styles.meta}>
+            {(item.requester?.reputation?.count ?? 0) > 0 && (
+              <View style={styles.metaChip}>
+                <Ionicons name="star" size={12} color="#f39c12" />
+                <Text variant="caption" muted>
+                  {item.requester.reputation!.rating.toFixed(1)}
+                  {item.requester.reputation!.criteria?.payment ? ` · paga ${item.requester.reputation!.criteria.payment.toFixed(1)}` : ''}
+                </Text>
+              </View>
+            )}
             {item.distance !== undefined && (
               <View style={styles.metaChip}>
                 <Ionicons name="location-outline" size={13} color={theme.textMuted} />

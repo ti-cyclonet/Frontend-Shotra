@@ -67,6 +67,7 @@ const META_BY_TYPE: Record<string, { icon: any; color: string }> = {
   CONTRACT_SIGNED: { icon: 'create', color: '#3498db' },
   CONTRACT_COMPLETED: { icon: 'checkmark-done', color: '#2ecc71' },
   NEW_RATING: { icon: 'star', color: '#f39c12' },
+  RATING_REVEALED: { icon: 'star-half', color: '#f39c12' },
   NEW_MESSAGE: { icon: 'chatbubble-ellipses', color: '#9b59b6' },
   REQUEST_EXPIRED: { icon: 'time', color: '#95a5a6' },
 };

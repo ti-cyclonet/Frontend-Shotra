@@ -6,6 +6,7 @@ import { api } from '../../src/services/api';
 import { confirmDialog, alertDialog } from '../../src/services/dialog';
 import { useGlass } from '../../src/context/ThemeProvider';
 import { RouteMapView } from '../../src/components/RouteMapView';
+import { ReputationLine } from '../../src/components/Reputation';
 import { spacing } from '../../src/components/ui';
 
 export default function RequestDetailScreen() {
@@ -205,10 +206,14 @@ export default function RequestDetailScreen() {
             )}
           </View>
           <Text style={[styles.requesterName, { color: theme.text }]}>{request.requester?.displayName}</Text>
-          {request.requester?.averageRating > 0 && (
+          {!request.requester?.reputation && request.requester?.averageRating > 0 && (
             <Text style={styles.rating}>★ {request.requester.averageRating.toFixed(1)}</Text>
           )}
         </View>
+        {/* Reputación del solicitante (como solicitante): ayuda al ofertante a decidir si ofertar */}
+        {request.requester?.reputation && myProfileId !== request.requester?.id && (
+          <ReputationLine reputation={request.requester.reputation} role="REQUESTER" mutedColor={theme.textMuted} />
+        )}
       </View>
 
       {/* Vencimiento: aviso si venció, o cuánto le queda si sigue abierta */}
@@ -288,9 +293,17 @@ export default function RequestDetailScreen() {
               </View>
               <Text style={[styles.proposalDesc, { color: theme.textMuted }]}>{p.description}</Text>
               {p.estimatedTime && <Text style={[styles.proposalTime, { color: theme.textMuted }]}>Tiempo: {p.estimatedTime}</Text>}
-              {p.provider?.averageRating > 0 && (
-                <Text style={styles.providerRating}>★ {p.provider.averageRating.toFixed(1)} · {p.provider.completedJobs} trabajos</Text>
+              {p.recommended && (
+                <View style={styles.recommendedTag}>
+                  <Ionicons name="sparkles" size={12} color="#fff" />
+                  <Text style={styles.recommendedText}>Recomendada por su reputación</Text>
+                </View>
               )}
+              {p.provider?.reputation ? (
+                <ReputationLine reputation={p.provider.reputation} role="PROVIDER" completedJobs={p.provider.completedJobs} mutedColor={theme.textMuted} />
+              ) : p.provider?.averageRating > 0 ? (
+                <Text style={styles.providerRating}>★ {p.provider.averageRating.toFixed(1)} · {p.provider.completedJobs} trabajos</Text>
+              ) : null}
               {p.images?.length > 0 && (
                 <View style={styles.offerImagesRow}>
                   {p.images.map((img: any) => (
@@ -470,6 +483,8 @@ const styles = StyleSheet.create({
   proposalDesc: { fontSize: 13, marginBottom: 4 },
   proposalTime: { fontSize: 12 },
   providerRating: { color: '#f39c12', fontSize: 12, marginTop: 4 },
+  recommendedTag: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 4, backgroundColor: '#16a34a', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3, marginTop: 8 },
+  recommendedText: { color: '#fff', fontSize: 11, fontWeight: '700' },
   viewProfileBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: 8, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1 },
   viewProfileBtnText: { fontSize: 12, fontWeight: '700' },
   offerImagesRow: { flexDirection: 'row', gap: 8, marginTop: 8 },

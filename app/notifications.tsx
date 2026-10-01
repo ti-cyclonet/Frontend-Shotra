@@ -12,6 +12,7 @@ const ICON_BY_TYPE: Record<string, any> = {
   CONTRACT_SIGNED: 'create',
   CONTRACT_COMPLETED: 'checkmark-done',
   NEW_RATING: 'star',
+  RATING_REVEALED: 'star-half',
   NEW_MESSAGE: 'chatbubble-ellipses',
 };
 

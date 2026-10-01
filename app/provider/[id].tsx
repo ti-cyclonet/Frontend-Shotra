@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../src/services/api';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { Text, Card, IconChip, SectionLabel, spacing, radius } from '../../src/components/ui';
+import { RATING_CRITERIA, ReputationLine } from '../../src/components/Reputation';
 
 export default function ProviderProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -18,7 +19,7 @@ export default function ProviderProfileScreen() {
     if (!id) return;
     Promise.all([
       api.get(`/profiles/${id}`),
-      api.get(`/ratings/profile/${id}`),
+      api.get(`/ratings/profile/${id}?role=PROVIDER`),
     ])
       .then(([p, r]) => {
         setProfile(p);
@@ -68,13 +69,39 @@ export default function ProviderProfileScreen() {
           {profile.bio && <Text variant="body" muted style={{ marginTop: 4, textAlign: 'center' }}>{profile.bio}</Text>}
 
           <Card padding={16} rounded={radius.xl} style={styles.statsCard}>
-            <Stat value={profile.averageRating > 0 ? profile.averageRating.toFixed(1) : '—'} label={`Rating (${profile.totalRatings || 0})`} accent={theme.accent} />
+            <Stat
+              value={profile.providerRatingCount > 0 ? profile.providerRating.toFixed(1) : '—'}
+              label={`Rating (${profile.providerRatingCount || 0})`}
+              accent={theme.accent}
+            />
             <View style={[styles.statDivider, { backgroundColor: theme.glassBorder }]} />
             <Stat value={String(profile.completedJobs || 0)} label="Trabajos" accent={theme.accent} />
             <View style={[styles.statDivider, { backgroundColor: theme.glassBorder }]} />
             <Stat value={String(profile.level || 1)} label="Nivel" accent={theme.accent} />
           </Card>
         </View>
+
+        {/* Reputación por criterio */}
+        {profile.providerReputation?.count > 0 && (
+          <View>
+            <SectionLabel>Cómo lo califican sus clientes</SectionLabel>
+            <Card padding={16} rounded={radius.xl}>
+              {RATING_CRITERIA.PROVIDER.filter((c) => typeof profile.providerReputation.criteria?.[c.key] === 'number').map((c) => {
+                const v: number = profile.providerReputation.criteria[c.key];
+                return (
+                  <View key={c.key} style={styles.criteriaRow}>
+                    <Text variant="body" style={{ flex: 1 }}>{c.label}</Text>
+                    <View style={[styles.criteriaBar, { backgroundColor: theme.glassBorder }]}>
+                      <View style={[styles.criteriaFill, { width: `${(v / 5) * 100}%`, backgroundColor: '#f39c12' }]} />
+                    </View>
+                    <Text variant="bodyStrong" style={styles.criteriaValue}>{v.toFixed(1)}</Text>
+                  </View>
+                );
+              })}
+              <ReputationLine reputation={profile.providerReputation} role="PROVIDER" mutedColor={theme.textMuted} showCriteria={false} />
+            </Card>
+          </View>
+        )}
 
         {/* Habilidades */}
         {profile.skills?.length > 0 && (
@@ -164,6 +191,10 @@ const styles = StyleSheet.create({
   statsCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', marginTop: spacing[5], alignSelf: 'stretch' },
   stat: { alignItems: 'center', flex: 1 },
   statDivider: { width: 1, height: 32 },
+  criteriaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], marginBottom: spacing[2] },
+  criteriaBar: { width: 80, height: 6, borderRadius: 3, overflow: 'hidden' },
+  criteriaFill: { height: 6, borderRadius: 3 },
+  criteriaValue: { width: 28, textAlign: 'right' },
   skillsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2], marginBottom: spacing[2] },
   skillChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill },
   portfolioGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] },
