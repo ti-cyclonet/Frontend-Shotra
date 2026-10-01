@@ -6,6 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { api } from '../../src/services/api';
 import { confirmDialog, alertDialog } from '../../src/services/dialog';
 import { useGlass } from '../../src/context/ThemeProvider';
+import { RATING_CRITERIA, REPEAT_QUESTION, RatingRole } from '../../src/components/Reputation';
 
 const STATUS_LABEL: Record<string, string> = {
   PENDING: 'Pendiente de firma',
@@ -52,10 +53,10 @@ export default function ContractDetailScreen() {
   const [busy, setBusy] = useState(false);
 
   // Estado del formulario de evaluación
+  // (los criterios dependen de a quién se califica: ofertante o solicitante)
   const [score, setScore] = useState(0);
-  const [quality, setQuality] = useState(0);
-  const [punctuality, setPunctuality] = useState(0);
-  const [communication, setCommunication] = useState(0);
+  const [criteria, setCriteria] = useState<Record<string, number>>({});
+  const [wouldRepeat, setWouldRepeat] = useState<boolean | null>(null);
   const [comment, setComment] = useState('');
 
   // Estado del formulario de confirmación + declaración de pago
@@ -164,13 +165,12 @@ export default function ContractDetailScreen() {
       await api.post('/ratings', {
         contractId: id,
         score,
-        quality: quality || undefined,
-        punctuality: punctuality || undefined,
-        communication: communication || undefined,
+        ...criteria,
+        wouldRepeat: wouldRepeat ?? undefined,
         comment: comment.trim() || undefined,
       });
       await load();
-      alertDialog('Evaluacion enviada', 'Gracias por calificar el servicio.');
+      alertDialog('Evaluación enviada', 'Gracias. La otra parte la verá cuando también te califique (o al vencer el plazo).');
     } catch (err: any) {
       alertDialog('Error', err.message || 'No se pudo enviar la evaluacion');
     } finally {
@@ -193,10 +193,17 @@ export default function ContractDetailScreen() {
   const requesterName = contract.request?.requester?.displayName || 'Solicitante';
   const iAlreadyRated = Array.isArray(contract.ratings)
     && contract.ratings.some((r: any) => r.authorId === myProfileId);
+  const ratingClosed = !!contract.ratingDeadline && new Date(contract.ratingDeadline).getTime() < Date.now();
   const canRate = (isRequester || isProvider)
     && ['COMPLETED', 'EVALUATED'].includes(contract.status)
-    && !iAlreadyRated;
+    && !iAlreadyRated
+    && !ratingClosed;
   const otherPartyName = isRequester ? providerName : requesterName;
+  // Quien solicita califica al ofertante y viceversa
+  const targetRole: RatingRole = isRequester ? 'PROVIDER' : 'REQUESTER';
+  const myRating = Array.isArray(contract.ratings) ? contract.ratings.find((r: any) => r.authorId === myProfileId) : null;
+  // El backend solo la devuelve una vez revelada (calificación a ciegas)
+  const ratingOfMe = Array.isArray(contract.ratings) ? contract.ratings.find((r: any) => r.targetId === myProfileId) : null;
 
   const isActive = ['SIGNED', 'IN_PROGRESS'].includes(contract.status);
   const isPendingConfirmation = contract.status === 'PENDING_CONFIRMATION';
@@ -420,19 +427,44 @@ export default function ContractDetailScreen() {
       {/* Formulario de evaluacion (doble via, tras completar) */}
       {canRate && (
         <View style={[styles.card, glass.card]}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Califica a {otherPartyName}</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 4 }]}>
+            Califica {targetRole === 'PROVIDER' ? 'al ofertante' : 'al solicitante'} {otherPartyName}
+          </Text>
+          <Text style={[styles.ratingHint, { color: theme.textMuted }]}>
+            Tu evaluación es privada hasta que {otherPartyName} también te califique
+            {contract.ratingDeadline ? ` o hasta el ${new Date(contract.ratingDeadline).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}` : ''}.
+          </Text>
 
-          <Text style={[styles.ratingLabel, { color: theme.textMuted }]}>Valoracion general *</Text>
+          <Text style={[styles.ratingLabel, { color: theme.textMuted }]}>Valoración general *</Text>
           <StarRating value={score} onChange={setScore} />
 
-          <Text style={[styles.ratingLabel, { color: theme.textMuted }]}>Calidad del servicio</Text>
-          <StarRating value={quality} onChange={setQuality} size={24} />
+          {RATING_CRITERIA[targetRole].map((c) => (
+            <View key={c.key}>
+              <Text style={[styles.ratingLabel, { color: theme.textMuted }]}>{c.label}</Text>
+              <StarRating
+                value={criteria[c.key] || 0}
+                onChange={(v) => setCriteria((prev) => ({ ...prev, [c.key]: v }))}
+                size={24}
+              />
+            </View>
+          ))}
 
-          <Text style={[styles.ratingLabel, { color: theme.textMuted }]}>Puntualidad</Text>
-          <StarRating value={punctuality} onChange={setPunctuality} size={24} />
-
-          <Text style={[styles.ratingLabel, { color: theme.textMuted }]}>Comunicacion</Text>
-          <StarRating value={communication} onChange={setCommunication} size={24} />
+          <Text style={[styles.ratingLabel, { color: theme.textMuted }]}>{REPEAT_QUESTION[targetRole]}</Text>
+          <View style={styles.repeatRow}>
+            {([{ v: true, label: 'Sí', icon: 'thumbs-up' }, { v: false, label: 'No', icon: 'thumbs-down' }] as const).map((o) => {
+              const selected = wouldRepeat === o.v;
+              return (
+                <TouchableOpacity
+                  key={o.label}
+                  style={[styles.payChip, { backgroundColor: selected ? theme.accent : theme.inputBg, borderWidth: 1, borderColor: selected ? theme.accent : theme.border }]}
+                  onPress={() => setWouldRepeat(selected ? null : o.v)}
+                >
+                  <Ionicons name={o.icon} size={16} color={selected ? theme.accentText : theme.textMuted} />
+                  <Text style={[styles.payChipText, { color: selected ? theme.accentText : theme.text }]}>{o.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
 
           <Text style={[styles.ratingLabel, { color: theme.textMuted }]}>Comentario</Text>
           <TextInput
@@ -448,7 +480,7 @@ export default function ContractDetailScreen() {
 
           <TouchableOpacity style={[styles.rateBtn, { backgroundColor: theme.warning }]} onPress={submitRating} disabled={busy}>
             <Ionicons name="star" size={18} color="#fff" />
-            <Text style={[styles.primaryBtnText, { color: '#fff' }]}>{busy ? 'Enviando...' : 'Enviar evaluacion'}</Text>
+            <Text style={[styles.primaryBtnText, { color: '#fff' }]}>{busy ? 'Enviando...' : 'Enviar evaluación'}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -457,7 +489,36 @@ export default function ContractDetailScreen() {
       {(isRequester || isProvider) && ['COMPLETED', 'EVALUATED'].includes(contract.status) && iAlreadyRated && (
         <View style={styles.infoBoxSuccess}>
           <Ionicons name="star" size={18} color="#2ecc71" />
-          <Text style={styles.infoTextSuccess}>Ya calificaste este servicio</Text>
+          <Text style={styles.infoTextSuccess}>Ya calificaste este servicio{myRating ? ` (★ ${myRating.score})` : ''}</Text>
+        </View>
+      )}
+
+      {/* Plazo vencido sin calificar */}
+      {(isRequester || isProvider) && ['COMPLETED', 'EVALUATED'].includes(contract.status) && !iAlreadyRated && ratingClosed && (
+        <View style={[styles.infoBox, { backgroundColor: theme.inputBg, marginBottom: 16 }]}>
+          <Text style={[styles.infoText, { color: theme.textMuted }]}>El plazo para calificar este servicio ya venció.</Text>
+        </View>
+      )}
+
+      {/* Evaluación recibida (el backend solo la envía una vez revelada) */}
+      {(isRequester || isProvider) && ratingOfMe && (
+        <View style={[styles.card, glass.card]}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>{otherPartyName} te calificó</Text>
+          <Text style={styles.receivedStars}>{'★'.repeat(ratingOfMe.score)}{'☆'.repeat(5 - ratingOfMe.score)}</Text>
+          {(RATING_CRITERIA[ratingOfMe.targetRole as RatingRole] || [])
+            .filter((c) => typeof ratingOfMe[c.key] === 'number')
+            .map((c) => (
+              <View key={c.key} style={[styles.partyRow, { marginTop: 8 }]}>
+                <Text style={[styles.receivedLabel, { color: theme.textMuted }]}>{c.label}</Text>
+                <Text style={[styles.receivedValue, { color: theme.text }]}>★ {ratingOfMe[c.key]}</Text>
+              </View>
+            ))}
+          {typeof ratingOfMe.wouldRepeat === 'boolean' && REPEAT_QUESTION[ratingOfMe.targetRole as RatingRole] && (
+            <Text style={[styles.receivedLabel, { color: theme.textMuted, marginTop: 8 }]}>
+              {REPEAT_QUESTION[ratingOfMe.targetRole as RatingRole]} {ratingOfMe.wouldRepeat ? 'Sí' : 'No'}
+            </Text>
+          )}
+          {ratingOfMe.comment ? <Text style={[styles.proposalDesc, { color: theme.text, marginTop: 10 }]}>“{ratingOfMe.comment}”</Text> : null}
         </View>
       )}
     </ScrollView>
@@ -500,6 +561,11 @@ const styles = StyleSheet.create({
   infoBoxSuccess: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: 'rgba(22,163,74,0.12)', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#16a34a', marginBottom: 16 },
   infoTextSuccess: { color: '#16a34a', fontSize: 15, fontWeight: '700' },
   ratingLabel: { fontSize: 13, fontWeight: '600', marginTop: 14, marginBottom: 8 },
+  ratingHint: { fontSize: 12, lineHeight: 17, marginBottom: 4 },
+  repeatRow: { flexDirection: 'row', gap: 8 },
+  receivedStars: { color: '#f39c12', fontSize: 20, fontWeight: '800' },
+  receivedLabel: { fontSize: 13, flex: 1 },
+  receivedValue: { fontSize: 13, fontWeight: '700' },
   textArea: { borderRadius: 10, padding: 12, fontSize: 15, borderWidth: 1, height: 80, marginTop: 4 },
   rateBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, padding: 16, marginTop: 18 },
   payMethods: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },

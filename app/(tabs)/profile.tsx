@@ -123,7 +123,12 @@ export default function ProfileScreen() {
         <Text variant="body" muted style={{ marginTop: 2 }}>{profile?.email}</Text>
         {profile?.isProvider && (
           <Card padding={16} rounded={radius.xl} style={styles.statsCard}>
-            <Stat value={profile?.averageRating?.toFixed(1) || '0.0'} label="Rating" accent={theme.accent} />
+            {/* Rating como ofertante (las evaluaciones recibidas como solicitante van aparte) */}
+            <Stat
+              value={(profile?.providerRatingCount ?? 0) > 0 ? profile.providerRating.toFixed(1) : '—'}
+              label={`Rating (${profile?.providerRatingCount ?? 0})`}
+              accent={theme.accent}
+            />
             <View style={[styles.statDivider, { backgroundColor: theme.glassBorder }]} />
             <Stat value={String(profile?.completedJobs || 0)} label="Trabajos" accent={theme.accent} />
             <View style={[styles.statDivider, { backgroundColor: theme.glassBorder }]} />
