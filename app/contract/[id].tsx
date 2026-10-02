@@ -267,21 +267,20 @@ export default function ContractDetailScreen() {
       </View>
 
       {/* Chat: habilitado cuando ambas partes firmaron (mismo criterio que en
-          el detalle de la solicitud); se deja visible pero deshabilitado
-          cuando el trabajo ya quedó Completado/Evaluado, en vez de ocultarse. */}
+          el detalle de la solicitud); con el trabajo Completado/Evaluado se
+          abre en solo lectura (se habilita de nuevo si vuelven a contratar). */}
       {bothSigned && (isRequester || isProvider) && (() => {
         const chatClosed = contract.status === 'COMPLETED' || contract.status === 'EVALUATED';
         return (
           <TouchableOpacity
             style={[styles.chatButton, { backgroundColor: chatClosed ? theme.textMuted : theme.accent }]}
-            disabled={chatClosed}
             onPress={() => router.push(`/chat/${contract.requestId}`)}
           >
             <Ionicons name="chatbubbles" size={18} color="#fff" />
             <Text style={styles.chatButtonText}>
-              {chatClosed ? 'Chat (trabajo finalizado)' : `Chat con ${otherPartyName}`}
+              {chatClosed ? 'Ver chat (solo lectura)' : `Chat con ${otherPartyName}`}
             </Text>
-            {!chatClosed && <Ionicons name="chevron-forward" size={18} color="#fff" />}
+            <Ionicons name="chevron-forward" size={18} color="#fff" />
           </TouchableOpacity>
         );
       })()}

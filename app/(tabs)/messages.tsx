@@ -1,8 +1,11 @@
-import { View, FlatList, StyleSheet } from 'react-native';
+import { View, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useState, useCallback, useRef } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { api } from '../../src/services/api';
+import { alertDialog, confirmDialog } from '../../src/services/dialog';
+import { useChat } from '../../src/context/ChatContext';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { Text, PressableCard, IconChip, CountDot, spacing, radius } from '../../src/components/ui';
 
@@ -13,11 +16,34 @@ export default function MessagesScreen() {
   const [conversations, setConversations] = useState<any[]>([]);
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const { refresh: refreshChatBadge } = useChat();
+
   const loadConversations = useCallback(() => {
-    // El backend ya devuelve las conversaciones ordenadas de la más
-    // reciente a la más antigua (por lastMessage.createdAt).
+    // Un chat por persona (todos los servicios con ella), del más reciente
+    // al más antiguo. Los cerrados se abren en modo solo lectura.
     api.get('/messaging/conversations').then(setConversations).catch(() => {});
   }, []);
+
+  /** Elimina el chat solo para mí (la otra persona lo conserva). */
+  const deleteConversation = useCallback(async (item: any) => {
+    const name = item.otherParty?.displayName || 'esta persona';
+    const ok = await confirmDialog(
+      'Eliminar chat',
+      `Se borrará tu historial con ${name} (la otra persona lo conserva). Si vuelven a tener un servicio, el chat reaparecerá.`,
+      'Eliminar',
+      'Cancelar',
+      'danger',
+    );
+    if (!ok) return;
+    try {
+      await api.delete(`/messaging/${item.requestId}`);
+      setConversations((prev) => prev.filter((c) => c.otherPartyId !== item.otherPartyId));
+      refreshChatBadge();
+      loadConversations();
+    } catch (err: any) {
+      alertDialog('No se pudo eliminar', err.message || 'Intenta de nuevo');
+    }
+  }, [loadConversations, refreshChatBadge]);
 
   // Mientras la pantalla está enfocada, refresca cada 5s (silencioso, sin
   // spinner) para reflejar mensajes nuevos y reordenar la lista casi en
@@ -43,7 +69,7 @@ export default function MessagesScreen() {
       </View>
       <FlatList
         data={conversations}
-        keyExtractor={(item) => item.requestId}
+        keyExtractor={(item) => item.otherPartyId || item.requestId}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         renderItem={({ item, index }) => (
@@ -52,17 +78,30 @@ export default function MessagesScreen() {
               padding={14}
               rounded={radius.xl}
               style={[styles.card, item.closed && styles.cardClosed]}
-              disabled={item.closed}
-              onPress={() => { if (!item.closed) router.push(`/chat/${item.requestId}`); }}
+              onPress={() => router.push(`/chat/${item.requestId}`)}
+              onLongPress={() => deleteConversation(item)}
             >
               <IconChip icon="person" color="slate" size={46} rounded={radius.pill} />
               <View style={styles.cardContent}>
                 <Text variant="bodyStrong">{item.otherParty?.displayName || 'Usuario'}</Text>
                 <Text variant="caption" muted numberOfLines={1} style={{ marginTop: 2 }}>
-                  {item.closed ? 'Trabajo finalizado' : item.lastMessage?.content}
+                  {item.lastMessage?.content || (item.closed ? 'Trabajo finalizado' : 'Servicio en curso')}
                 </Text>
+                {item.closed && (
+                  <Text variant="micro" muted style={{ marginTop: 2 }}>
+                    Solo lectura · trabajo finalizado{item.servicesCount > 1 ? ` · ${item.servicesCount} servicios` : ''}
+                  </Text>
+                )}
               </View>
-              {!item.closed && item.unreadCount > 0 && <CountDot count={item.unreadCount} />}
+              {item.unreadCount > 0 && <CountDot count={item.unreadCount} />}
+              <TouchableOpacity
+                onPress={() => deleteConversation(item)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityLabel="Eliminar chat"
+                style={styles.deleteButton}
+              >
+                <Ionicons name="trash-outline" size={18} color={theme.textMuted} />
+              </TouchableOpacity>
             </PressableCard>
           </Animated.View>
         )}
@@ -83,7 +122,8 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: spacing[5], paddingTop: 60, paddingBottom: spacing[3] },
   list: { paddingHorizontal: spacing[5], paddingTop: spacing[2], paddingBottom: 120 },
   card: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], marginBottom: spacing[2] },
-  cardClosed: { opacity: 0.5 },
+  cardClosed: { opacity: 0.7 },
+  deleteButton: { padding: 4 },
   cardContent: { flex: 1 },
   empty: { alignItems: 'center', paddingTop: 100, paddingHorizontal: spacing[6] },
 });
