@@ -134,20 +134,17 @@ export default function ProviderProfileScreen() {
         </Card>
 
         {/* Comentarios / evaluaciones */}
-        <SectionLabel>{`Comentarios de clientes (${ratings.length})`}</SectionLabel>
+        <SectionLabel>{`Lo que dicen sus clientes (${ratings.length})`}</SectionLabel>
         {ratings.length > 0 ? (
           ratings.map((rating: any) => (
             <Card key={rating.id} padding={16} rounded={radius.xl} style={{ marginBottom: spacing[2] }}>
               <View style={styles.reviewHeader}>
                 <View style={styles.reviewAuthorRow}>
                   <View style={[styles.reviewAvatar, { backgroundColor: theme.accentSoft }]}>
-                    {rating.author?.avatarUrl ? (
-                      <Image source={{ uri: rating.author.avatarUrl }} style={styles.reviewAvatarImg} />
-                    ) : (
-                      <Ionicons name="person" size={12} color={theme.accent} />
-                    )}
+                    <Ionicons name="person" size={12} color={theme.accent} />
                   </View>
-                  <Text variant="bodyStrong">{rating.author?.displayName || 'Usuario'}</Text>
+                  {/* Anónimo: los comentarios no muestran quién los escribió */}
+                  <Text variant="bodyStrong">Cliente de Shotra</Text>
                 </View>
                 <Text style={{ color: '#f39c12', fontWeight: '800' }}>★ {rating.score}</Text>
               </View>

@@ -18,9 +18,13 @@ export default function ProfileScreen() {
   const [addingSkill, setAddingSkill] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
+  // Comentarios recibidos: anónimos y por grupos (los demás aún no se muestran)
+  const [feedback, setFeedback] = useState<{ released: any[]; pending: number; batchSize: number; releaseDays: number } | null>(null);
+
   useEffect(() => {
     loadProfile();
     api.get('/categories/leaves').then(setCategories).catch(() => {});
+    api.get('/ratings/me/feedback').then(setFeedback).catch(() => {});
   }, []);
 
   const loadProfile = () => {
@@ -156,6 +160,30 @@ export default function ProfileScreen() {
                 thumbColor="#fff"
               />
             </View>
+          </Card>
+        </Animated.View>
+      )}
+
+      {/* Lo que dicen de ti: comentarios anónimos y por grupos */}
+      {feedback && (feedback.released.length > 0 || feedback.pending > 0) && (
+        <Animated.View entering={FadeInDown.delay(120).springify().damping(16)}>
+          <SectionLabel>Lo que dicen de ti</SectionLabel>
+          <Card padding={16} rounded={radius.xl}>
+            {feedback.released.length === 0 && (
+              <Text variant="body" muted>Todavía no hay comentarios para mostrarte.</Text>
+            )}
+            {feedback.released.slice(0, 10).map((f: any) => (
+              <View key={f.id} style={styles.feedbackItem}>
+                <Text style={{ color: '#f39c12', fontWeight: '800' }}>{'★'.repeat(f.score)}</Text>
+                {f.comment ? <Text variant="body" style={{ marginTop: 2 }}>“{f.comment}”</Text> : <Text variant="caption" muted>Sin comentario</Text>}
+              </View>
+            ))}
+            <Text variant="caption" muted style={{ marginTop: spacing[2] }}>
+              {feedback.pending > 0
+                ? `${feedback.pending} comentario(s) más te llegarán al completar un grupo de ${feedback.batchSize} o a los ${feedback.releaseDays} días. `
+                : ''}
+              Para proteger a quien califica, los comentarios no muestran su nombre.
+            </Text>
           </Card>
         </Animated.View>
       )}
@@ -303,4 +331,5 @@ const styles = StyleSheet.create({
   modalHandle: { alignSelf: 'center', width: 44, height: 5, borderRadius: 3, marginBottom: spacing[4] },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing[2] },
   categoryOption: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], marginBottom: spacing[2] },
+  feedbackItem: { paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(127,127,127,0.25)' },
 });

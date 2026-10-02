@@ -202,8 +202,6 @@ export default function ContractDetailScreen() {
   // Quien solicita califica al ofertante y viceversa
   const targetRole: RatingRole = isRequester ? 'PROVIDER' : 'REQUESTER';
   const myRating = Array.isArray(contract.ratings) ? contract.ratings.find((r: any) => r.authorId === myProfileId) : null;
-  // El backend solo la devuelve una vez revelada (calificación a ciegas)
-  const ratingOfMe = Array.isArray(contract.ratings) ? contract.ratings.find((r: any) => r.targetId === myProfileId) : null;
 
   const isActive = ['SIGNED', 'IN_PROGRESS'].includes(contract.status);
   const isPendingConfirmation = contract.status === 'PENDING_CONFIRMATION';
@@ -499,25 +497,14 @@ export default function ContractDetailScreen() {
         </View>
       )}
 
-      {/* Evaluación recibida (el backend solo la envía una vez revelada) */}
-      {(isRequester || isProvider) && ratingOfMe && (
+      {/* Evaluación recibida: no se muestra quién ni qué dijo (opción B); solo que
+          ya cuenta. Los comentarios llegan anónimos y agrupados en Perfil. */}
+      {(isRequester || isProvider) && contract.receivedRatingCounted && (
         <View style={[styles.card, glass.card]}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>{otherPartyName} te calificó</Text>
-          <Text style={styles.receivedStars}>{'★'.repeat(ratingOfMe.score)}{'☆'.repeat(5 - ratingOfMe.score)}</Text>
-          {(RATING_CRITERIA[ratingOfMe.targetRole as RatingRole] || [])
-            .filter((c) => typeof ratingOfMe[c.key] === 'number')
-            .map((c) => (
-              <View key={c.key} style={[styles.partyRow, { marginTop: 8 }]}>
-                <Text style={[styles.receivedLabel, { color: theme.textMuted }]}>{c.label}</Text>
-                <Text style={[styles.receivedValue, { color: theme.text }]}>★ {ratingOfMe[c.key]}</Text>
-              </View>
-            ))}
-          {typeof ratingOfMe.wouldRepeat === 'boolean' && REPEAT_QUESTION[ratingOfMe.targetRole as RatingRole] && (
-            <Text style={[styles.receivedLabel, { color: theme.textMuted, marginTop: 8 }]}>
-              {REPEAT_QUESTION[ratingOfMe.targetRole as RatingRole]} {ratingOfMe.wouldRepeat ? 'Sí' : 'No'}
-            </Text>
-          )}
-          {ratingOfMe.comment ? <Text style={[styles.proposalDesc, { color: theme.text, marginTop: 10 }]}>“{ratingOfMe.comment}”</Text> : null}
+          <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 4 }]}>Tu evaluación de este servicio ya cuenta</Text>
+          <Text style={[styles.receivedLabel, { color: theme.textMuted }]}>
+            Ya suma a tu reputación. Para proteger a quien califica, los comentarios te llegan sin nombre y agrupados en tu Perfil.
+          </Text>
         </View>
       )}
     </ScrollView>
