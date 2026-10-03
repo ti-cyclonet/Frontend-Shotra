@@ -4,10 +4,11 @@ import {
 } from 'react-native';
 import { useState, useCallback } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { api } from '../src/services/api';
 import { useTheme } from '../src/context/ThemeProvider';
 import { alertDialog } from '../src/services/dialog';
+import { useNav, headerTop } from '../src/web/nav';
 
 const GENDERS = [
   { key: 'M', label: 'Masculino' },
@@ -53,6 +54,7 @@ function toDateInputValue(value?: string | null): string {
 }
 
 export default function EditProfileScreen() {
+  const nav = useNav();
   const { theme } = useTheme();
 
   const [loading, setLoading] = useState(true);
@@ -119,7 +121,7 @@ export default function EditProfileScreen() {
         phone: phone.trim(),
       });
       alertDialog('Datos actualizados', 'Tu perfil se actualizó correctamente.');
-      router.canGoBack() ? router.back() : router.push('/(tabs)/profile');
+      nav.back('/(tabs)/profile');
     } catch (e: any) {
       alertDialog('No se pudo guardar', e.message || 'Intenta de nuevo');
     } finally {
@@ -130,7 +132,7 @@ export default function EditProfileScreen() {
   return (
     <KeyboardAvoidingView style={[styles.container, { backgroundColor: theme.background }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.canGoBack() ? router.back() : router.push('/(tabs)/profile')}>
+        <TouchableOpacity style={styles.backButton} onPress={() => nav.back('/(tabs)/profile')}>
           <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: theme.text }]}>Editar mis datos</Text>
@@ -220,7 +222,7 @@ export default function EditProfileScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingTop: 52 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingTop: headerTop(52) },
   backButton: { padding: 4 },
   headerTitle: { fontSize: 20, fontWeight: '800' },
   content: { paddingHorizontal: 24, paddingBottom: 48 },

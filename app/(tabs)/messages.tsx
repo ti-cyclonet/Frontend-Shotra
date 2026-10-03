@@ -1,13 +1,14 @@
 import { View, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useCallback, useRef } from 'react';
-import { router, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { api } from '../../src/services/api';
 import { alertDialog, confirmDialog } from '../../src/services/dialog';
 import { useChat } from '../../src/context/ChatContext';
 import { useTheme } from '../../src/context/ThemeProvider';
-import { Text, PressableCard, IconChip, CountDot, spacing, radius } from '../../src/components/ui';
+import { Text, Input, PressableCard, IconChip, CountDot, spacing, radius } from '../../src/components/ui';
+import { openRoute, headerTop, useActiveDetail, useIsWide } from '../../src/web/nav';
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -17,6 +18,9 @@ export default function MessagesScreen() {
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { refresh: refreshChatBadge } = useChat();
+  const activeDetail = useActiveDetail();
+  const wide = useIsWide();
+  const [query, setQuery] = useState('');
 
   const loadConversations = useCallback(() => {
     // Un chat por persona (todos los servicios con ella), del más reciente
@@ -66,9 +70,18 @@ export default function MessagesScreen() {
       <View style={styles.header}>
         <Text variant="sectionLabel" muted>Shotra</Text>
         <Text variant="h1">Mensajes</Text>
+        {/* Buscador de chats (web ancha, como en WhatsApp Web) */}
+        {wide && (
+          <Input
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Buscar un chat"
+            containerStyle={{ marginTop: spacing[3] }}
+          />
+        )}
       </View>
       <FlatList
-        data={conversations}
+        data={query.trim() ? conversations.filter((c) => (c.otherParty?.displayName || '').toLowerCase().includes(query.trim().toLowerCase())) : conversations}
         keyExtractor={(item) => item.otherPartyId || item.requestId}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
@@ -77,8 +90,8 @@ export default function MessagesScreen() {
             <PressableCard
               padding={14}
               rounded={radius.xl}
-              style={[styles.card, item.closed && styles.cardClosed]}
-              onPress={() => router.push(`/chat/${item.requestId}`)}
+              style={[styles.card, item.closed && styles.cardClosed, activeDetail === `/chat/${item.requestId}` && { borderColor: theme.accent, borderTopColor: theme.accent }]}
+              onPress={() => openRoute(`/chat/${item.requestId}`)}
               onLongPress={() => deleteConversation(item)}
             >
               <IconChip icon="person" color="slate" size={46} rounded={radius.pill} />
@@ -108,8 +121,10 @@ export default function MessagesScreen() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <IconChip icon="chatbubbles-outline" color="neutral" size={64} rounded={radius['2xl']} />
-            <Text variant="h2" style={{ marginTop: spacing[4] }}>Sin conversaciones</Text>
-            <Text variant="body" muted style={{ marginTop: 6, textAlign: 'center' }}>Los mensajes apareceran cuando interactues con una solicitud</Text>
+            <Text variant="h2" style={{ marginTop: spacing[4] }}>{query.trim() ? 'Sin resultados' : 'Sin conversaciones'}</Text>
+            <Text variant="body" muted style={{ marginTop: 6, textAlign: 'center' }}>
+              {query.trim() ? `Ningún chat coincide con "${query.trim()}"` : 'Los mensajes apareceran cuando interactues con una solicitud'}
+            </Text>
           </View>
         }
       />
@@ -119,7 +134,7 @@ export default function MessagesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { paddingHorizontal: spacing[5], paddingTop: 60, paddingBottom: spacing[3] },
+  header: { paddingHorizontal: spacing[5], paddingTop: headerTop(60), paddingBottom: spacing[3] },
   list: { paddingHorizontal: spacing[5], paddingTop: spacing[2], paddingBottom: 120 },
   card: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], marginBottom: spacing[2] },
   cardClosed: { opacity: 0.7 },

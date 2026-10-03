@@ -1,9 +1,10 @@
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { useState, useCallback } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { api } from '../src/services/api';
 import { useGlass } from '../src/context/ThemeProvider';
+import { useNav, headerTop } from '../src/web/nav';
 
 interface Charge {
   id: string;
@@ -46,6 +47,7 @@ function periodLabel(key: string) {
 }
 
 export default function AccountStatementScreen() {
+  const nav = useNav();
   const glass = useGlass();
   const theme = glass.theme;
   const [data, setData] = useState<Statement | null>(null);
@@ -76,7 +78,7 @@ export default function AccountStatementScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.canGoBack() ? router.back() : router.push('/(tabs)/profile')}>
+        <TouchableOpacity style={styles.backButton} onPress={() => nav.back('/(tabs)/profile')}>
           <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: theme.text }]}>Estado de cuenta</Text>
@@ -137,7 +139,7 @@ export default function AccountStatementScreen() {
           return (
             <TouchableOpacity
               style={[styles.chargeCard, glass.card]}
-              onPress={() => item.contractId && router.push(`/contract/${item.contractId}`)}
+              onPress={() => item.contractId && nav.open(`/contract/${item.contractId}`)}
             >
               <View style={[styles.chargeIcon, { backgroundColor: meta.color + '22' }]}>
                 <Ionicons name={meta.icon} size={18} color={meta.color} />
@@ -175,7 +177,7 @@ export default function AccountStatementScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingTop: 52 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingTop: headerTop(52) },
   backButton: { padding: 4 },
   headerTitle: { fontSize: 20, fontWeight: '800' },
   list: { padding: 16, paddingTop: 4 },

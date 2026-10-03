@@ -1,11 +1,12 @@
 import { View, FlatList, StyleSheet } from 'react-native';
 import { useState, useCallback } from 'react';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { router, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { api } from '../../src/services/api';
 import { confirmDialog, alertDialog } from '../../src/services/dialog';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { Text, PressableCard, Badge, IconChip, Button, spacing, radius, typography } from '../../src/components/ui';
+import { openRoute, headerTop, useActiveDetail } from '../../src/web/nav';
 
 type Tab = 'requests' | 'proposals';
 
@@ -64,6 +65,7 @@ function proposalDisplayStatus(item: any): { label: string; chip: 'teal' | 'ambe
 
 export default function ActivityScreen() {
   const { theme } = useTheme();
+  const activeDetail = useActiveDetail();
   const [activeTab, setActiveTab] = useState<Tab>('requests');
   const [requests, setRequests] = useState<any[]>([]);
   const [proposals, setProposals] = useState<any[]>([]);
@@ -113,7 +115,7 @@ export default function ActivityScreen() {
 
   const renderRequest = ({ item, index }: { item: any; index: number }) => (
     <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 55).springify().damping(16)}>
-      <PressableCard padding={16} rounded={radius['2xl']} onPress={() => router.push(`/request/${item.id}`)} style={styles.card}>
+      <PressableCard padding={16} rounded={radius['2xl']} onPress={() => openRoute(`/request/${item.id}`)} style={[styles.card, activeDetail === `/request/${item.id}` && { borderColor: theme.accent, borderTopColor: theme.accent }]}>
         <View style={styles.row}>
           <Text variant="cardTitle" style={{ flex: 1, marginRight: spacing[2] }} numberOfLines={1}>{item.title}</Text>
           <Badge
@@ -159,10 +161,13 @@ export default function ActivityScreen() {
         rounded={radius['2xl']}
         onPress={() =>
           item.status === 'ACCEPTED' && item.contract?.id
-            ? router.push(`/contract/${item.contract.id}`)
-            : router.push(`/request/${item.requestId || item.request?.id}`)
+            ? openRoute(`/contract/${item.contract.id}`)
+            : openRoute(`/request/${item.requestId || item.request?.id}`)
         }
-        style={styles.card}
+        style={[
+          styles.card,
+          (activeDetail === `/contract/${item.contract?.id}` || activeDetail === `/request/${item.requestId || item.request?.id}`) && { borderColor: theme.accent, borderTopColor: theme.accent },
+        ]}
       >
         <View style={styles.row}>
           <Text variant="cardTitle" style={{ flex: 1, marginRight: spacing[2] }} numberOfLines={1}>{item.request?.title}</Text>
@@ -244,7 +249,7 @@ function TabPill({ label, active, onPress }: { label: string; active: boolean; o
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { paddingHorizontal: spacing[5], paddingTop: 60, paddingBottom: spacing[3] },
+  header: { paddingHorizontal: spacing[5], paddingTop: headerTop(60), paddingBottom: spacing[3] },
   tabs: { flexDirection: 'row', paddingHorizontal: spacing[5], gap: spacing[2], marginBottom: spacing[2] },
   tab: { flex: 1, alignItems: 'center' },
   list: { paddingHorizontal: spacing[5], paddingTop: spacing[2], paddingBottom: 120 },

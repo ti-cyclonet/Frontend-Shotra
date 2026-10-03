@@ -1,9 +1,9 @@
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import { useNotifications } from '../src/context/NotificationsContext';
 import { useGlass } from '../src/context/ThemeProvider';
 import { confirmDialog } from '../src/services/dialog';
+import { useNav, headerTop } from '../src/web/nav';
 
 const ICON_BY_TYPE: Record<string, any> = {
   NEW_PROPOSAL: 'paper-plane',
@@ -28,15 +28,16 @@ function timeAgo(iso: string) {
 }
 
 export default function NotificationsScreen() {
+  const nav = useNav();
   const { items, markRead, markAllRead, clearAll } = useNotifications();
   const glass = useGlass();
   const theme = glass.theme;
 
   const open = (n: any) => {
     if (!n.read) markRead(n.id);
-    if (n.entityType === 'chat' && n.entityId) router.push(`/chat/${n.entityId}`);
-    else if (n.entityType === 'contract' && n.entityId) router.push(`/contract/${n.entityId}`);
-    else if (n.entityType === 'request' && n.entityId) router.push(`/request/${n.entityId}`);
+    if (n.entityType === 'chat' && n.entityId) nav.open(`/chat/${n.entityId}`);
+    else if (n.entityType === 'contract' && n.entityId) nav.open(`/contract/${n.entityId}`);
+    else if (n.entityType === 'request' && n.entityId) nav.open(`/request/${n.entityId}`);
   };
 
   const handleClearAll = async () => {
@@ -47,7 +48,7 @@ export default function NotificationsScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.canGoBack() ? router.back() : router.push('/(tabs)/feed')}>
+        <TouchableOpacity style={styles.backButton} onPress={() => nav.back('/(tabs)/feed')}>
           <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: theme.text }]}>Notificaciones</Text>
@@ -96,7 +97,7 @@ export default function NotificationsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingTop: 52 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingTop: headerTop(52) },
   backButton: { padding: 4 },
   headerTitle: { fontSize: 20, fontWeight: '800' },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 14 },

@@ -1,12 +1,13 @@
 import { createContext, useContext, useEffect, useRef, useState, ReactNode, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { api } from '../services/api';
 import { playNotificationSound, playChatMessageSound } from '../services/sound';
 import { useAuth } from './AuthContext';
+import { openRoute } from '../web/nav';
 
 interface NotificationItem {
   id: string;
@@ -297,9 +298,9 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data as { entityType?: string; entityId?: string };
-      if (data?.entityType === 'chat' && data.entityId) router.push(`/chat/${data.entityId}`);
-      else if (data?.entityType === 'contract' && data.entityId) router.push(`/contract/${data.entityId}`);
-      else if (data?.entityType === 'request' && data.entityId) router.push(`/request/${data.entityId}`);
+      if (data?.entityType === 'chat' && data.entityId) openRoute(`/chat/${data.entityId}`);
+      else if (data?.entityType === 'contract' && data.entityId) openRoute(`/contract/${data.entityId}`);
+      else if (data?.entityType === 'request' && data.entityId) openRoute(`/request/${data.entityId}`);
     });
     return () => sub.remove();
   }, []);
@@ -336,9 +337,9 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     const b = banner;
     markRead(b.id);
     setBanner(null);
-    if (b.entityType === 'chat' && b.entityId) router.push(`/chat/${b.entityId}`);
-    else if (b.entityType === 'contract' && b.entityId) router.push(`/contract/${b.entityId}`);
-    else if (b.entityType === 'request' && b.entityId) router.push(`/request/${b.entityId}`);
+    if (b.entityType === 'chat' && b.entityId) openRoute(`/chat/${b.entityId}`);
+    else if (b.entityType === 'contract' && b.entityId) openRoute(`/contract/${b.entityId}`);
+    else if (b.entityType === 'request' && b.entityId) openRoute(`/request/${b.entityId}`);
   };
 
   return (

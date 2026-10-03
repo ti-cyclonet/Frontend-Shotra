@@ -1,14 +1,15 @@
 import { View, ScrollView, StyleSheet, TouchableOpacity, Image, ActivityIndicator, Modal } from 'react-native';
 import { useState, useEffect } from 'react';
-import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../src/services/api';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { Text, Card, IconChip, SectionLabel, spacing, radius } from '../../src/components/ui';
 import { RATING_CRITERIA, ReputationLine } from '../../src/components/Reputation';
+import { useNav, useRouteParams, headerTop } from '../../src/web/nav';
 
 export default function ProviderProfileScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const nav = useNav();
+  const { id } = useRouteParams<{ id: string }>();
   const { theme } = useTheme();
   const [profile, setProfile] = useState<any>(null);
   const [ratings, setRatings] = useState<any[]>([]);
@@ -48,7 +49,7 @@ export default function ProviderProfileScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: theme.background }}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => (router.canGoBack() ? router.back() : router.push('/(tabs)/feed'))}>
+        <TouchableOpacity style={styles.backButton} onPress={() => nav.back('/(tabs)/feed')}>
           <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
         <Text variant="h2">Perfil del ofertante</Text>
@@ -179,7 +180,7 @@ function Stat({ value, label, accent }: { value: string; label: string; accent: 
 
 const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingTop: 52 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingTop: headerTop(52) },
   backButton: { padding: 4 },
   content: { paddingHorizontal: spacing[5], paddingBottom: 60 },
   profileHeader: { alignItems: 'center', marginBottom: spacing[4] },
