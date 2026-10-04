@@ -2,13 +2,14 @@ import {
   View, FlatList, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { useState, useCallback, useRef, useMemo } from 'react';
-import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../src/services/api';
 import { alertDialog, confirmDialog } from '../../src/services/dialog';
 import { useGlass } from '../../src/context/ThemeProvider';
 import { useChat } from '../../src/context/ChatContext';
 import { Text, Input, spacing, radius } from '../../src/components/ui';
+import { useNav, useRouteParams, headerTop } from '../../src/web/nav';
 
 interface Message {
   id: string;
@@ -38,7 +39,8 @@ const POLL_INTERVAL_MS = 4000;
 
 export default function ChatScreen() {
   // El chat se abre desde cualquiera de las solicitudes con esa persona
-  const { requestId } = useLocalSearchParams<{ requestId: string }>();
+  const { requestId } = useRouteParams<{ requestId: string }>();
+  const nav = useNav();
   const glass = useGlass();
   const theme = glass.theme;
   const listRef = useRef<FlatList>(null);
@@ -124,7 +126,7 @@ export default function ChatScreen() {
     try {
       await api.delete(`/messaging/${requestId}`);
       refreshChatBadge();
-      router.canGoBack() ? router.back() : router.push('/(tabs)/messages');
+      nav.back('/(tabs)/messages');
     } catch (err: any) {
       alertDialog('No se pudo eliminar', err.message || 'Intenta de nuevo');
     }
@@ -133,7 +135,7 @@ export default function ChatScreen() {
   return (
     <KeyboardAvoidingView style={[styles.container, { backgroundColor: theme.background }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.headerButton} onPress={() => router.canGoBack() ? router.back() : router.push('/(tabs)/messages')}>
+        <TouchableOpacity style={styles.headerButton} onPress={() => nav.back('/(tabs)/messages')}>
           <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
@@ -209,6 +211,20 @@ export default function ChatScreen() {
             onChangeText={setText}
             placeholder="Escribe un mensaje..."
             multiline
+            // En web: Enter envía y Shift+Enter hace salto de línea (como WhatsApp Web),
+            // y la caja arranca en una línea en vez del alto de un área de texto.
+            {...(Platform.OS === 'web'
+              ? {
+                  numberOfLines: 1,
+                  style: { minHeight: 22, maxHeight: 140 },
+                  onKeyPress: (e: any) => {
+                    if (e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  },
+                }
+              : {})}
           />
           <TouchableOpacity
             style={[styles.sendButton, { backgroundColor: theme.accent, opacity: text.trim() && !sending ? 1 : 0.5 }]}
@@ -233,7 +249,7 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingTop: 52, gap: 8 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingTop: headerTop(52), gap: 8 },
   headerButton: { padding: 4 },
   list: { paddingHorizontal: spacing[4], paddingTop: spacing[2], paddingBottom: spacing[4], flexGrow: 1 },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 80, paddingHorizontal: spacing[6] },

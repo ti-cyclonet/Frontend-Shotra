@@ -8,6 +8,7 @@ import { alertDialog } from '../../src/services/dialog';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { Text, Card, PressableCard, Button, Input, IconChip, SectionLabel, spacing, radius, typography } from '../../src/components/ui';
 import { RouteMapView, RoutePoint } from '../../src/components/RouteMapView';
+import { headerTop } from '../../src/web/nav';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
@@ -353,7 +354,7 @@ export default function CreateRequestScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing[5], paddingTop: 60, paddingBottom: 120 },
+  content: { padding: spacing[5], paddingTop: headerTop(60), paddingBottom: 120 },
   row: { flexDirection: 'row', gap: spacing[3] },
   half: { flex: 1 },
   geoStatus: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], marginTop: spacing[2] },

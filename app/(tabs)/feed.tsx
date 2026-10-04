@@ -2,11 +2,12 @@ import { View, FlatList, StyleSheet, Pressable, RefreshControl } from 'react-nat
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSpring, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { api } from '../../src/services/api';
 import { useNotifications } from '../../src/context/NotificationsContext';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { Text, Card, IconChip, Badge, CountDot, spacing, radius, motion, typography } from '../../src/components/ui';
+import { openRoute, headerTop, useActiveDetail, useIsWide } from '../../src/web/nav';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
@@ -99,6 +100,8 @@ export default function FeedScreen() {
   const [loading, setLoading] = useState(true);
   const { unread } = useNotifications();
   const { theme } = useTheme();
+  const activeDetail = useActiveDetail();
+  const wide = useIsWide();
 
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -141,8 +144,8 @@ export default function FeedScreen() {
   };
 
   const renderItem = ({ item, index }: { item: ServiceRequest; index: number }) => (
-    <FeedCard index={index} onPress={() => router.push(`/request/${item.id}`)}>
-      <Card padding={16} rounded={radius['2xl']} style={styles.card}>
+    <FeedCard index={index} onPress={() => openRoute(`/request/${item.id}`)}>
+      <Card padding={16} rounded={radius['2xl']} style={activeDetail === `/request/${item.id}` ? [styles.card, { borderColor: theme.accent, borderTopColor: theme.accent }] : styles.card}>
         <View style={styles.cardHeader}>
           <View style={styles.catRow}>
             <IconChip icon={categoryIcon(item.category?.name)} size={34} rounded={radius.md} />
@@ -192,7 +195,8 @@ export default function FeedScreen() {
           <Text variant="sectionLabel" muted>Shotra</Text>
           <Text variant="h1">Explorar servicios</Text>
         </View>
-        <NotificationBell unread={unread} onPress={() => router.push('/notifications')} accent={theme.accent} text={theme.text} />
+        {/* En web ancha los avisos están en la barra lateral */}
+        {!wide && <NotificationBell unread={unread} onPress={() => openRoute('/notifications')} accent={theme.accent} text={theme.text} />}
       </View>
       <FlatList
         data={requests}
@@ -217,7 +221,7 @@ export default function FeedScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: spacing[5], paddingTop: 60, paddingBottom: spacing[3] },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: spacing[5], paddingTop: headerTop(60), paddingBottom: spacing[3] },
   bell: { padding: 4 },
   bellBadge: { position: 'absolute', top: -2, right: -2 },
   list: { paddingHorizontal: spacing[5], paddingTop: spacing[2], paddingBottom: 120 },

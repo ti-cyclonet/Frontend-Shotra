@@ -1,6 +1,5 @@
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Modal } from 'react-native';
 import { useState, useEffect } from 'react';
-import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../src/services/api';
 import { confirmDialog, alertDialog } from '../../src/services/dialog';
@@ -8,9 +7,11 @@ import { useGlass } from '../../src/context/ThemeProvider';
 import { RouteMapView } from '../../src/components/RouteMapView';
 import { ReputationLine } from '../../src/components/Reputation';
 import { spacing } from '../../src/components/ui';
+import { useNav, useRouteParams, headerTop } from '../../src/web/nav';
 
 export default function RequestDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const nav = useNav();
+  const { id } = useRouteParams<{ id: string }>();
   const glass = useGlass();
   const theme = glass.theme;
   const [request, setRequest] = useState<any>(null);
@@ -87,7 +88,7 @@ export default function RequestDetailScreen() {
           'Ver contrato',
           'Mas tarde',
         );
-        if (goContract) router.push(`/contract/${res.contractId}`);
+        if (goContract) nav.open(`/contract/${res.contractId}`);
       } else {
         alertDialog('Propuesta aceptada', 'Se genero el contrato de servicio.');
       }
@@ -146,7 +147,7 @@ export default function RequestDetailScreen() {
     <>
     <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={styles.content}>
       {/* Header con botón volver */}
-      <TouchableOpacity style={styles.backButton} onPress={() => router.canGoBack() ? router.back() : router.push('/(tabs)/feed')}>
+      <TouchableOpacity style={styles.backButton} onPress={() => nav.back('/(tabs)/feed')}>
         <Ionicons name="arrow-back" size={22} color={theme.text} />
         <Text style={[styles.backText, { color: theme.text }]}>Volver</Text>
       </TouchableOpacity>
@@ -236,7 +237,7 @@ export default function RequestDetailScreen() {
 
       {/* Contrato generado */}
       {request.contract && (
-        <TouchableOpacity style={[styles.contractButton, { backgroundColor: theme.success }]} onPress={() => router.push(`/contract/${request.contract.id}`)}>
+        <TouchableOpacity style={[styles.contractButton, { backgroundColor: theme.success }]} onPress={() => nav.open(`/contract/${request.contract.id}`)}>
           <Ionicons name="document-text" size={18} color="#fff" />
           <Text style={[styles.contractButtonText, { color: '#fff' }]}>Ver contrato {request.contract.code}</Text>
           <Ionicons name="chevron-forward" size={18} color="#fff" />
@@ -252,7 +253,7 @@ export default function RequestDetailScreen() {
           return (
             <TouchableOpacity
               style={[styles.contractButton, { backgroundColor: closed ? theme.textMuted : theme.accent }]}
-              onPress={() => router.push(`/chat/${request.id}`)}
+              onPress={() => nav.open(`/chat/${request.id}`)}
             >
               <Ionicons name="chatbubbles" size={18} color={theme.accentText} />
               <Text style={[styles.contractButtonText, { color: theme.accentText }]}>
@@ -276,7 +277,7 @@ export default function RequestDetailScreen() {
                 <TouchableOpacity
                   style={styles.providerRow}
                   disabled={!p.provider?.id || !isProviderProfileAccessible(p.provider.id)}
-                  onPress={() => router.push(`/provider/${p.provider.id}`)}
+                  onPress={() => nav.open(`/provider/${p.provider.id}`)}
                 >
                   {/* Avatar del ofertante (o ícono si no tiene foto) */}
                   <View style={[styles.providerAvatar, glass.chip]}>
@@ -319,7 +320,7 @@ export default function RequestDetailScreen() {
               {p.provider?.id && isProviderProfileAccessible(p.provider.id) && (
                 <TouchableOpacity
                   style={[styles.viewProfileBtn, { borderColor: theme.accent }]}
-                  onPress={() => router.push(`/provider/${p.provider.id}`)}
+                  onPress={() => nav.open(`/provider/${p.provider.id}`)}
                 >
                   <Ionicons name="images-outline" size={14} color={theme.accent} />
                   <Text style={[styles.viewProfileBtnText, { color: theme.accent }]}>Ver perfil, trabajos y comentarios</Text>
@@ -418,7 +419,7 @@ export default function RequestDetailScreen() {
               })}
             </View>
           ) : (
-            <TouchableOpacity onPress={() => router.push('/portfolio-settings')}>
+            <TouchableOpacity onPress={() => nav.open('/portfolio-settings')}>
               <Text style={{ color: theme.accent, fontSize: 12, marginTop: 4 }}>
                 Aún no tienes fotos cargadas. Toca aquí para agregar algunas.
               </Text>
@@ -449,7 +450,7 @@ export default function RequestDetailScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: 20, paddingTop: 50 },
+  content: { padding: 20, paddingTop: headerTop(50) },
   loadingText: { textAlign: 'center', marginTop: 100 },
   backButton: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 20 },
   backText: { fontSize: 15, fontWeight: '600' },

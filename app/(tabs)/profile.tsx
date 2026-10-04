@@ -3,11 +3,12 @@ import * as ImagePicker from 'expo-image-picker';
 import { useState, useEffect } from 'react';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+
 import { useAuth } from '../../src/context/AuthContext';
 import { api } from '../../src/services/api';
 import { useTheme } from '../../src/context/ThemeProvider';
 import { Text, Card, PressableCard, Button, IconChip, Badge, SectionLabel, spacing, radius } from '../../src/components/ui';
+import { openRoute, headerTop } from '../../src/web/nav';
 
 export default function ProfileScreen() {
   const { logout } = useAuth();
@@ -222,7 +223,7 @@ export default function ProfileScreen() {
       {/* Estado de cuenta */}
       <Animated.View entering={FadeInDown.delay(200).springify().damping(16)}>
         <SectionLabel>Cuenta</SectionLabel>
-        <PressableCard padding={14} rounded={radius.xl} onPress={() => router.push('/account-statement')} style={styles.navRow}>
+        <PressableCard padding={14} rounded={radius.xl} onPress={() => openRoute('/account-statement')} style={styles.navRow}>
           <IconChip icon="wallet-outline" color="red" />
           <View style={{ flex: 1 }}>
             <Text variant="bodyStrong">Estado de cuenta</Text>
@@ -231,7 +232,7 @@ export default function ProfileScreen() {
           <Badge label={profile?.plan === 'PRO' ? 'PRO' : 'FREE'} solid={profile?.plan === 'PRO'} />
           <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
         </PressableCard>
-        <PressableCard padding={14} rounded={radius.xl} onPress={() => router.push('/edit-profile')} style={[styles.navRow, { marginTop: spacing[2] }]}>
+        <PressableCard padding={14} rounded={radius.xl} onPress={() => openRoute('/edit-profile')} style={[styles.navRow, { marginTop: spacing[2] }]}>
           <IconChip icon="person-outline" color="slate" />
           <View style={{ flex: 1 }}>
             <Text variant="bodyStrong">Editar mis datos</Text>
@@ -240,7 +241,7 @@ export default function ProfileScreen() {
           <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
         </PressableCard>
         {profile?.isProvider && (
-          <PressableCard padding={14} rounded={radius.xl} onPress={() => router.push('/portfolio-settings')} style={[styles.navRow, { marginTop: spacing[2] }]}>
+          <PressableCard padding={14} rounded={radius.xl} onPress={() => openRoute('/portfolio-settings')} style={[styles.navRow, { marginTop: spacing[2] }]}>
             <IconChip icon="images-outline" color="green" />
             <View style={{ flex: 1 }}>
               <Text variant="bodyStrong">Fotos de mi oferta</Text>
@@ -313,7 +314,7 @@ function Stat({ value, label, accent }: { value: string; label: string; accent: 
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing[5], paddingTop: 60, paddingBottom: 120 },
+  content: { padding: spacing[5], paddingTop: headerTop(60), paddingBottom: 120 },
   header: { alignItems: 'center', marginBottom: spacing[4] },
   avatar: { width: 84, height: 84, borderRadius: radius.pill, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
   avatarImg: { width: 84, height: 84, borderRadius: radius.pill },

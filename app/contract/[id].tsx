@@ -1,12 +1,13 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import { useState, useCallback } from 'react';
-import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { api } from '../../src/services/api';
 import { confirmDialog, alertDialog } from '../../src/services/dialog';
 import { useGlass } from '../../src/context/ThemeProvider';
 import { RATING_CRITERIA, REPEAT_QUESTION, RatingRole } from '../../src/components/Reputation';
+import { useNav, useRouteParams, headerTop } from '../../src/web/nav';
 
 const STATUS_LABEL: Record<string, string> = {
   PENDING: 'Pendiente de firma',
@@ -44,7 +45,8 @@ function StarRating({ value, onChange, size = 30 }: { value: number; onChange: (
 }
 
 export default function ContractDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const nav = useNav();
+  const { id } = useRouteParams<{ id: string }>();
   const glass = useGlass();
   const theme = glass.theme;
   const [contract, setContract] = useState<any>(null);
@@ -218,7 +220,7 @@ export default function ContractDetailScreen() {
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={styles.content}>
-      <TouchableOpacity style={styles.backButton} onPress={() => router.canGoBack() ? router.back() : router.push('/(tabs)/feed')}>
+      <TouchableOpacity style={styles.backButton} onPress={() => nav.back('/(tabs)/feed')}>
         <Ionicons name="arrow-back" size={22} color={theme.text} />
         <Text style={[styles.backText, { color: theme.text }]}>Volver</Text>
       </TouchableOpacity>
@@ -272,7 +274,7 @@ export default function ContractDetailScreen() {
         return (
           <TouchableOpacity
             style={[styles.chatButton, { backgroundColor: chatClosed ? theme.textMuted : theme.accent }]}
-            onPress={() => router.push(`/chat/${contract.requestId}`)}
+            onPress={() => nav.open(`/chat/${contract.requestId}`)}
           >
             <Ionicons name="chatbubbles" size={18} color="#fff" />
             <Text style={styles.chatButtonText}>
@@ -513,7 +515,7 @@ export default function ContractDetailScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: 20, paddingTop: 50 },
+  content: { padding: 20, paddingTop: headerTop(50) },
   loadingText: { textAlign: 'center', marginTop: 100 },
   backButton: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 20 },
   backText: { color: '#fff', fontSize: 15, fontWeight: '600' },

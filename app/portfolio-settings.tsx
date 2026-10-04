@@ -5,16 +5,18 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { useState, useCallback } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { api } from '../src/services/api';
 import { useTheme } from '../src/context/ThemeProvider';
 import { confirmDialog, alertDialog } from '../src/services/dialog';
 import { Text, Card, Button, spacing, radius } from '../src/components/ui';
+import { useNav, headerTop } from '../src/web/nav';
 
 const MAX_ITEMS = 10;
 const MAX_IN_OFFER = 3;
 
 export default function PortfolioSettingsScreen() {
+  const nav = useNav();
   const { theme } = useTheme();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -116,7 +118,7 @@ export default function PortfolioSettingsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: theme.background }}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => (router.canGoBack() ? router.back() : router.push('/(tabs)/profile'))}>
+        <TouchableOpacity style={styles.backButton} onPress={() => nav.back('/(tabs)/profile')}>
           <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
         <Text variant="h2">Fotos de mi oferta</Text>
@@ -256,7 +258,7 @@ export default function PortfolioSettingsScreen() {
 
 const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingTop: 52 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingTop: headerTop(52) },
   backButton: { padding: 4 },
   content: { paddingHorizontal: spacing[5], paddingBottom: 60 },
   countersRow: { flexDirection: 'row', gap: spacing[3], marginBottom: spacing[4] },
