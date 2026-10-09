@@ -135,10 +135,9 @@ O en JSON (*Open text editor*):
 ```
 
 La expresión deja pasar los archivos con extensión (bundles de `_expo/`,
-`manifest.webmanifest`, íconos, `route-map.html` y `vendor/leaflet/`): si se
-reescribieran al HTML, la PWA, el mapa y la app dejarían de cargar. No usar
-`/<*>` aquí por esa razón. `html` debe estar en la lista: el mapa del trayecto es
-la página `/route-map.html`.
+`manifest.webmanifest`, íconos y `vendor/leaflet/`, que usa el mapa del
+trayecto): si se reescribieran al HTML, la PWA, el mapa y la app dejarían de
+cargar. Por eso es mejor esta expresión que `/<*>`.
 
 ### 4.3 Dominio `shotra.cyclonet.com.co`
 
