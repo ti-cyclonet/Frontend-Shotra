@@ -79,40 +79,83 @@ eas submit --platform ios --profile production
 
 ---
 
-## 4. Versión web (opcional — Amplify)
+## 4. Versión web (Amplify)
 
-Si además quieres una versión web:
+La versión web es la misma app compilada con `react-native-web`. En pantallas
+anchas (≥ 900 px) usa el diseño de tres zonas (barra lateral, lista y panel de
+detalle); en el celular se ve igual que la app. Se puede **instalar** (PWA:
+manifiesto e íconos en `public/`) y muestra **avisos del navegador** para
+mensajes y ofertas nuevas cuando la pestaña no está a la vista (el usuario los
+activa en *Avisos → Activar*; no hay push web: llegan mientras la pestaña esté
+abierta).
+
+Build local:
 
 ```bash
 cd Shotra/Frontend-Shotra
-# usa las variables de .env.production
+# usa EXPO_PUBLIC_API_URL / EXPO_PUBLIC_AUTHORIZA_URL de .env.production
 npx expo export --platform web
 ```
 
-Sube el contenido de `dist/` a una app de Amplify con dominio
-`shotra.cyclonet.com.co` (ya está en el allowlist de CORS de Nginx del backend).
+La plantilla HTML es `public/index.html` (idioma, manifiesto, íconos, color de
+tema y metadatos de iPhone); todo lo que está en `public/` se copia tal cual a
+`dist/`.
 
-Build spec de Amplify (si conectas el repo):
+### 4.1 App de Amplify
 
-```yaml
-version: 1
-frontend:
-  phases:
-    preBuild:
-      commands:
-        - npm ci
-    build:
-      commands:
-        - npx expo export --platform web
-  artifacts:
-    baseDirectory: dist
-    files:
-      - '**/*'
-```
+La app **Cyclonet-Shotra** está conectada al repo `ti-cyclonet/Frontend-Shotra`,
+rama `master`, con el build spec `amplify-shotra.yml` del repo `cyclonet`
+(raíz de este meta-repo). Variables de entorno en Amplify (opcionales: si
+faltan se usan las de `.env.production`):
 
-Configura en Amplify las variables de entorno:
 - `EXPO_PUBLIC_API_URL=https://api.cyclonet.com.co/api/shotra`
 - `EXPO_PUBLIC_AUTHORIZA_URL=https://api.cyclonet.com.co/api/auth`
+
+### 4.2 Regla SPA (obligatoria)
+
+La web es una sola página: sin esta regla, recargar o abrir un enlace directo
+(`/request/123`, `/chat/…`) da **404**. En Amplify → *Hosting* → *Rewrites and
+redirects* → *Manage* → agregar (de primera):
+
+| Source address | Target address | Type |
+|---|---|---|
+| `</^[^.]+$\|\.(?!(css\|gif\|ico\|jpg\|jpeg\|js\|png\|txt\|svg\|webp\|woff\|woff2\|ttf\|otf\|map\|json\|webmanifest)$)([^.]+$)/>` | `/index.html` | `200 (Rewrite)` |
+
+O en JSON (*Open text editor*):
+
+```json
+[
+  {
+    "source": "</^[^.]+$|\\.(?!(css|gif|ico|jpg|jpeg|js|png|txt|svg|webp|woff|woff2|ttf|otf|map|json|webmanifest)$)([^.]+$)/>",
+    "target": "/index.html",
+    "status": "200",
+    "condition": null
+  }
+]
+```
+
+La expresión deja pasar los archivos con extensión (bundles de `_expo/`,
+`manifest.webmanifest`, íconos): si se reescribieran al HTML, la PWA y la app
+dejarían de cargar. No usar `/<*>` aquí por esa razón.
+
+### 4.3 Dominio `shotra.cyclonet.com.co`
+
+Hoy el subdominio **no existe en DNS**. Para publicarlo:
+
+1. Amplify → Cyclonet-Shotra → *Hosting* → *Custom domains* → *Add domain* →
+   `cyclonet.com.co` (la zona de Route 53 `Z02176422M2CCLDJYBZ0R` ya existe).
+2. *Configure domain*: dejar **solo** el subdominio `shotra` → rama `master`
+   (desmarcar el dominio raíz y `www`, que ya son del landing).
+3. Amplify crea el CNAME en Route 53 y el certificado SSL (tarda unos minutos
+   en pasar a *Available*).
+4. Verificar: `https://shotra.cyclonet.com.co/request/123` debe abrir el login
+   (y, al entrar, la solicitud), no un 404.
+
+CORS: nginx refleja el origen que llegue (`$http_origin`) en `/api/shotra/` y
+`/api/auth/`, así que el dominio nuevo no requiere cambios. Lo que sí está
+fijo es la lista de encabezados permitidos (`Content-Type`, `Authorization`,
+`x-tenant-id`): si la web empieza a mandar otro encabezado, hay que agregarlo en
+`deploy/nginx/cyclonet.conf` y en el servidor.
 
 ---
 

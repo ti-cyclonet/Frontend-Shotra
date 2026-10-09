@@ -6,6 +6,8 @@ import { useState, useRef, useEffect } from 'react';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/context/AuthContext';
+import { takeReturnTo } from '../../src/navigation/returnTo';
+import { openRoute } from '../../src/web/nav';
 import { useTheme, THEMES, ThemeKey } from '../../src/context/ThemeProvider';
 
 const THEME_ORDER: ThemeKey[] = ['graphite', 'black', 'crimson'];
@@ -59,6 +61,10 @@ export default function LoginScreen() {
     try {
       await login(email, password);
       router.replace('/(tabs)/feed');
+      // Si llegó por un enlace directo, se abre al entrar (en web ancha, en el
+      // panel de detalle; en el celular, encima del feed para poder volver).
+      const back = takeReturnTo();
+      if (back) setTimeout(() => openRoute(back), 60);
     } catch (err: any) {
       setError(err.message || 'Error al iniciar sesion');
       triggerShake();

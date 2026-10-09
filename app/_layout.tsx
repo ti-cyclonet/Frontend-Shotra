@@ -1,7 +1,7 @@
-import { Stack } from 'expo-router';
+import { Stack, router, usePathname, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, Platform } from 'react-native';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   useFonts,
   Poppins_400Regular,
@@ -17,9 +17,33 @@ import { NotificationsProvider } from '../src/context/NotificationsContext';
 import { ChatProvider } from '../src/context/ChatContext';
 import { DialogProvider } from '../src/context/DialogProvider';
 import { ThemeProvider, useTheme } from '../src/context/ThemeProvider';
+import { useAuth } from '../src/context/AuthContext';
+import { setReturnTo } from '../src/navigation/returnTo';
+import { muteAlertsFor } from '../src/services/dialog';
 
 function ThemedStack() {
   const { theme } = useTheme();
+  const { isAuthenticated, loading } = useAuth();
+  const segments = useSegments();
+  const pathname = usePathname();
+
+  // Sin sesión, cualquier pantalla fuera de (auth) lleva al login y recuerda a
+  // dónde iba (un enlace compartido, un aviso del navegador, shotra://…) para
+  // abrirlo al entrar. Antes, un enlace directo sin sesión terminaba en
+  // "No se pudo cargar la solicitud".
+  // Al cerrar sesión no se recuerda la pantalla: el siguiente usuario no debe caer en ella.
+  const hadSession = useRef(false);
+  useEffect(() => {
+    if (isAuthenticated) hadSession.current = true;
+    if (loading || isAuthenticated) return;
+    const inAuth = segments[0] === '(auth)';
+    const atIndex = (segments as string[]).length === 0;
+    if (inAuth || atIndex) return;
+    if (!hadSession.current) setReturnTo(pathname);
+    // La pantalla protegida ya empezó a cargar sin sesión: su error no se muestra
+    muteAlertsFor(5000);
+    router.replace('/(auth)/login');
+  }, [loading, isAuthenticated, segments, pathname]);
 
   // En web, pintar el fondo del documento y quitar el outline azul por defecto de los inputs
   useEffect(() => {
