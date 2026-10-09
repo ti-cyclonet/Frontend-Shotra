@@ -1,8 +1,7 @@
 /**
- * HTML del mapa de trayecto del celular (Leaflet + tiles de OpenStreetMap +
- * ruta real por OSRM, o línea punteada si OSRM falla), para el WebView de
- * RouteMapView. La web usa public/route-map.html, con el mismo dibujo:
- * mantener los dos en sincronía.
+ * HTML del mapa de trayecto (Leaflet + tiles de OpenStreetMap + ruta real por
+ * OSRM, o línea punteada si OSRM falla). Lo usan RouteMapView (WebView, en el
+ * celular) y RouteMapView.web (iframe srcdoc, en el navegador).
  */
 export interface RoutePoint {
   lat: number;
@@ -17,7 +16,14 @@ function clean(p: RoutePoint | null | undefined): RoutePoint | null {
   return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
 }
 
-export function buildRouteMapHtml(rawOrigin: RoutePoint | null | undefined, rawDestination: RoutePoint | null | undefined): string {
+/** Leaflet del CDN (celular, WebView aislado de la app) o una copia propia (web). */
+const LEAFLET_CDN = 'https://unpkg.com/leaflet@1.9.4/dist';
+
+export function buildRouteMapHtml(
+  rawOrigin: RoutePoint | null | undefined,
+  rawDestination: RoutePoint | null | undefined,
+  leafletBase: string = LEAFLET_CDN,
+): string {
   const origin = clean(rawOrigin);
   const destination = clean(rawDestination);
   const points: RoutePoint[] = [];
@@ -62,12 +68,12 @@ export function buildRouteMapHtml(rawOrigin: RoutePoint | null | undefined, rawD
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <!-- La política de tiles de OpenStreetMap exige Referer: sin él responde 403 ("Access blocked") -->
   <meta name="referrer" content="strict-origin-when-cross-origin" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="${leafletBase}/leaflet.css" />
   <style>html, body, #map { height: 100%; margin: 0; padding: 0; background: #eef0f2; }</style>
 </head>
 <body>
   <div id="map"></div>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="${leafletBase}/leaflet.js"></script>
   <script>
     var map = L.map('map', { zoomControl: false }).setView([${center.lat}, ${center.lng}], 13);
     map.attributionControl.setPrefix(false);
