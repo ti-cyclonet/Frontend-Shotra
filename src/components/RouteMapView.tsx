@@ -32,7 +32,9 @@ export function RouteMapView({ origin, destination, height = 220 }: RouteMapView
   return (
     <View style={[styles.wrap, { height, backgroundColor: theme.glass }]}>
       <WebView
-        source={{ html }}
+        // baseUrl: sin él la página no tiene origen y no envía Referer, y los
+        // tiles de OpenStreetMap responden 403 ("Access blocked")
+        source={{ html, baseUrl: 'https://cyclonet.com.co/' }}
         style={styles.web}
         scrollEnabled={false}
         originWhitelist={['*']}

@@ -1,7 +1,8 @@
 /**
- * HTML del mapa de trayecto (Leaflet + tiles de OpenStreetMap + ruta real por
- * OSRM, o línea punteada si OSRM falla). Lo usan RouteMapView (WebView, en el
- * celular) y RouteMapView.web (iframe, en el navegador).
+ * HTML del mapa de trayecto del celular (Leaflet + tiles de OpenStreetMap +
+ * ruta real por OSRM, o línea punteada si OSRM falla), para el WebView de
+ * RouteMapView. La web usa public/route-map.html, con el mismo dibujo:
+ * mantener los dos en sincronía.
  */
 export interface RoutePoint {
   lat: number;
@@ -59,6 +60,8 @@ export function buildRouteMapHtml(rawOrigin: RoutePoint | null | undefined, rawD
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <!-- La política de tiles de OpenStreetMap exige Referer: sin él responde 403 ("Access blocked") -->
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>html, body, #map { height: 100%; margin: 0; padding: 0; background: #eef0f2; }</style>
 </head>
@@ -66,8 +69,14 @@ export function buildRouteMapHtml(rawOrigin: RoutePoint | null | undefined, rawD
   <div id="map"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([${center.lat}, ${center.lng}], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+    var map = L.map('map', { zoomControl: false }).setView([${center.lat}, ${center.lng}], 13);
+    map.attributionControl.setPrefix(false);
+    // Política de uso de OSM: atribución visible, Referer y el host sin subdominios a/b/c
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
+      referrerPolicy: 'strict-origin-when-cross-origin'
+    }).addTo(map);
     var originIcon = L.divIcon({ className: '', html: '🏪', iconSize: [28, 28], iconAnchor: [14, 14] });
     var destIcon = L.divIcon({ className: '', html: '📍', iconSize: [28, 36], iconAnchor: [14, 32] });
     ${originMarker}

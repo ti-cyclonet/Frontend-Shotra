@@ -119,14 +119,14 @@ redirects* → *Manage* → agregar (de primera):
 
 | Source address | Target address | Type |
 |---|---|---|
-| `</^[^.]+$\|\.(?!(css\|gif\|ico\|jpg\|jpeg\|js\|png\|txt\|svg\|webp\|woff\|woff2\|ttf\|otf\|map\|json\|webmanifest)$)([^.]+$)/>` | `/index.html` | `200 (Rewrite)` |
+| `</^[^.]+$\|\.(?!(css\|gif\|ico\|jpg\|jpeg\|js\|html\|png\|txt\|svg\|webp\|woff\|woff2\|ttf\|otf\|map\|json\|webmanifest)$)([^.]+$)/>` | `/index.html` | `200 (Rewrite)` |
 
 O en JSON (*Open text editor*):
 
 ```json
 [
   {
-    "source": "</^[^.]+$|\\.(?!(css|gif|ico|jpg|jpeg|js|png|txt|svg|webp|woff|woff2|ttf|otf|map|json|webmanifest)$)([^.]+$)/>",
+    "source": "</^[^.]+$|\\.(?!(css|gif|ico|jpg|jpeg|js|html|png|txt|svg|webp|woff|woff2|ttf|otf|map|json|webmanifest)$)([^.]+$)/>",
     "target": "/index.html",
     "status": "200",
     "condition": null
@@ -135,8 +135,10 @@ O en JSON (*Open text editor*):
 ```
 
 La expresión deja pasar los archivos con extensión (bundles de `_expo/`,
-`manifest.webmanifest`, íconos): si se reescribieran al HTML, la PWA y la app
-dejarían de cargar. No usar `/<*>` aquí por esa razón.
+`manifest.webmanifest`, íconos, `route-map.html` y `vendor/leaflet/`): si se
+reescribieran al HTML, la PWA, el mapa y la app dejarían de cargar. No usar
+`/<*>` aquí por esa razón. `html` debe estar en la lista: el mapa del trayecto es
+la página `/route-map.html`.
 
 ### 4.3 Dominio `shotra.cyclonet.com.co`
 
