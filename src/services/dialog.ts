@@ -53,8 +53,19 @@ export function confirmDialog(
   });
 }
 
+/**
+ * Silencia los avisos un momento. Lo usa el guardián de sesión al mandar al
+ * login a quien abrió un enlace sin sesión: la pantalla alcanza a montarse, su
+ * carga falla (401) y su "No se pudo cargar…" quedaba encima del login.
+ */
+let mutedUntil = 0;
+export function muteAlertsFor(ms: number): void {
+  mutedUntil = Date.now() + ms;
+}
+
 /** Aviso simple con estilo propio. */
 export function alertDialog(title: string, message?: string, variant?: DialogVariant): Promise<boolean> {
+  if (Date.now() < mutedUntil) return Promise.resolve(true);
   const api = getDialogApi();
   if (api) {
     return api.alert({
