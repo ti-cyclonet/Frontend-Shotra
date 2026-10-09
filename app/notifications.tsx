@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNotifications } from '../src/context/NotificationsContext';
 import { useGlass } from '../src/context/ThemeProvider';
 import { confirmDialog } from '../src/services/dialog';
 import { useNav, headerTop } from '../src/web/nav';
+import { BrowserPermission, browserPermission, requestBrowserPermission } from '../src/web/browserNotify';
 
 const ICON_BY_TYPE: Record<string, any> = {
   NEW_PROPOSAL: 'paper-plane',
@@ -32,6 +34,9 @@ export default function NotificationsScreen() {
   const { items, markRead, markAllRead, clearAll } = useNotifications();
   const glass = useGlass();
   const theme = glass.theme;
+  // Avisos del navegador (solo web; 'unsupported' en el celular, donde hay push)
+  const [webPermission, setWebPermission] = useState<BrowserPermission>(browserPermission());
+  const enableWebAlerts = async () => setWebPermission(await requestBrowserPermission());
 
   const open = (n: any) => {
     if (!n.read) markRead(n.id);
@@ -63,6 +68,24 @@ export default function NotificationsScreen() {
           )}
         </View>
       </View>
+
+      {webPermission === 'default' && (
+        <View style={[styles.webAlert, glass.card]}>
+          <Ionicons name="notifications-outline" size={22} color={theme.accent} />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.title, { color: theme.text }]}>Avisos en este navegador</Text>
+            <Text style={[styles.body, { color: theme.textMuted }]}>Te avisamos de mensajes y ofertas nuevas aunque estés en otra pestaña.</Text>
+          </View>
+          <TouchableOpacity style={[styles.webAlertBtn, { backgroundColor: theme.accent }]} onPress={enableWebAlerts}>
+            <Text style={[styles.webAlertBtnText, { color: theme.accentText }]}>Activar</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      {webPermission === 'denied' && (
+        <Text style={[styles.webAlertDenied, { color: theme.textMuted }]}>
+          Los avisos de este navegador están bloqueados. Puedes activarlos desde el candado de la barra de direcciones.
+        </Text>
+      )}
 
       <FlatList
         data={items}
@@ -109,6 +132,10 @@ const styles = StyleSheet.create({
   body: { fontSize: 13, marginTop: 2 },
   time: { fontSize: 11, marginTop: 4 },
   dot: { width: 10, height: 10, borderRadius: 5 },
+  webAlert: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, padding: 14, marginHorizontal: 16, marginBottom: 10 },
+  webAlertBtn: { borderRadius: 999, paddingVertical: 8, paddingHorizontal: 16 },
+  webAlertBtnText: { fontWeight: '800', fontSize: 13 },
+  webAlertDenied: { fontSize: 12, marginHorizontal: 16, marginBottom: 8 },
   empty: { alignItems: 'center', paddingTop: 100 },
   emptyText: { fontSize: 15, marginTop: 16, fontWeight: '600' },
 });
