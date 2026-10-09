@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Los tiles de OpenStreetMap exigen Referer: sin él responden "Access blocked" (403) -->
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <meta name="robots" content="noindex" />
+  <title>Mapa del trayecto</title>
+  <!-- Leaflet alojado en la propia app (no en un CDN): esta página comparte origen con Shotra -->
+  <link rel="stylesheet" href="/vendor/leaflet/leaflet.css" />
+  <style>html, body, #map { height: 100%; margin: 0; padding: 0; background: #eef0f2; }</style>
+</head>
+<body>
+  <div id="map"></div>
+  <script src="/vendor/leaflet/leaflet.js"></script>
+  <script>
+    /*
+     * Mapa de trayecto de la versión web (RouteMapView.web lo abre en un iframe):
+     *   /route-map.html?o=<lat>,<lng>&d=<lat>,<lng>   (o y d opcionales)
+     * Mismo dibujo que src/components/routeMapHtml.ts (la versión del celular):
+     * marcadores, ruta por las vías con OSRM y línea punteada si OSRM falla.
+     * Mantener los dos en sincronía.
+     */
+    (function () {
+      var params = new URLSearchParams(location.search);
+      function point(name) {
+        var parts = (params.get(name) || '').split(',');
+        var lat = Number(parts[0]), lng = Number(parts[1]);
+        return parts.length === 2 && isFinite(lat) && isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180
+          ? [lat, lng] : null;
+      }
+      var origin = point('o');
+      var destination = point('d');
+      var center = origin || destination || [4.6097, -74.0817];
+
+      var map = L.map('map', { zoomControl: false }).setView(center, 13);
+      map.attributionControl.setPrefix(false);
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
+        referrerPolicy: 'strict-origin-when-cross-origin'
+      }).addTo(map);
+
+      var originIcon = L.divIcon({ className: '', html: '🏪', iconSize: [28, 28], iconAnchor: [14, 14] });
+      var destIcon = L.divIcon({ className: '', html: '📍', iconSize: [28, 36], iconAnchor: [14, 32] });
+      if (origin) L.marker(origin, { icon: originIcon }).addTo(map);
+      if (destination) L.marker(destination, { icon: destIcon }).addTo(map);
+
+      if (origin && destination) {
+        var pts = [origin, destination];
+        map.fitBounds(pts, { padding: [30, 30] });
+        var dashed = function () {
+          L.polyline(pts, { color: '#dc2626', weight: 3, opacity: 0.7, dashArray: '6 6' }).addTo(map);
+        };
+        fetch('https://router.project-osrm.org/route/v1/driving/' + origin[1] + ',' + origin[0] + ';' + destination[1] + ',' + destination[0] + '?overview=full&geometries=geojson')
+          .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+          .then(function (data) {
+            var coords = data && data.routes && data.routes[0] && data.routes[0].geometry.coordinates;
+            if (coords && coords.length) {
+              L.polyline(coords.map(function (c) { return [c[1], c[0]]; }), { color: '#dc2626', weight: 4, opacity: 0.85 }).addTo(map);
+            } else {
+              dashed();
+            }
+          })
+          .catch(dashed);
+      } else if (origin || destination) {
+        map.setView(origin || destination, 15);
+      }
+    })();
+  </script>
+</body>
+</html>
