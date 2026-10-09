@@ -8,6 +8,16 @@ import { api } from '../services/api';
 import { playNotificationSound, playChatMessageSound } from '../services/sound';
 import { useAuth } from './AuthContext';
 import { openRoute } from '../web/nav';
+import { setTitleBadge, showBrowserNotification } from '../web/browserNotify';
+
+const IS_WEB = Platform.OS === 'web';
+
+/** Destino de una notificación (chat, contrato o solicitud). */
+function openEntity(n: { entityType?: string; entityId?: string }): void {
+  if (n.entityType === 'chat' && n.entityId) openRoute(`/chat/${n.entityId}`);
+  else if (n.entityType === 'contract' && n.entityId) openRoute(`/contract/${n.entityId}`);
+  else if (n.entityType === 'request' && n.entityId) openRoute(`/request/${n.entityId}`);
+}
 
 interface NotificationItem {
   id: string;
@@ -188,9 +198,10 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         // entrada en vez de duplicarla.
         // Las que llegaron por push (app minimizada o cerrada) ya están en la
         // bandeja: no se publican otra vez al volver a la app.
-        const presented = await Notifications.getPresentedNotificationsAsync().catch(() => []);
+        // En la web no hay bandeja del sistema (ver el aviso del navegador abajo).
+        const presented = IS_WEB ? [] : await Notifications.getPresentedNotificationsAsync().catch(() => []);
         const inTray = new Set(presented.map((p) => (p.request.content.data as any)?.notificationId).filter(Boolean));
-        for (const n of freshUnread) {
+        for (const n of IS_WEB ? [] : freshUnread) {
           if (inTray.has(n.id)) continue;
           Notifications.scheduleNotificationAsync({
             identifier: n.id,
@@ -215,6 +226,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
             playNotificationSound();
           }
           setBanner(next);
+          // Web: si la pestaña no está a la vista, aviso del navegador (con permiso)
+          if (IS_WEB) showBrowserNotification(next, () => { markReadRef.current(next.id); openEntity(next); });
         }
       }
       firstLoad.current = false;
@@ -230,6 +243,9 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       setUnread((u) => Math.max(0, u - 1));
     } catch {}
   }, []);
+  // refresh se define antes que markRead: el aviso del navegador lo usa por referencia
+  const markReadRef = useRef(markRead);
+  markReadRef.current = markRead;
 
   const markAllRead = useCallback(async () => {
     try {
@@ -260,7 +276,9 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   // ni badge; el resto de la app sigue funcionando igual (banner in-app +
   // sonido siguen dependiendo del polling mientras la app esté abierta).
   useEffect(() => {
-    if (!isAuthenticated) return;
+    // En la web el permiso se pide con un clic (Avisos → Activar): pedirlo solo
+    // al entrar hace que el navegador lo bloquee o lo silencie. Tampoco hay push.
+    if (!isAuthenticated || IS_WEB) return;
     (async () => {
       try {
         // El permiso se pide igual: lo necesitan el badge y las notificaciones
@@ -297,10 +315,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   // mismo destino que el banner propio de la app.
   useEffect(() => {
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data as { entityType?: string; entityId?: string };
-      if (data?.entityType === 'chat' && data.entityId) openRoute(`/chat/${data.entityId}`);
-      else if (data?.entityType === 'contract' && data.entityId) openRoute(`/contract/${data.entityId}`);
-      else if (data?.entityType === 'request' && data.entityId) openRoute(`/request/${data.entityId}`);
+      openEntity(response.notification.request.content.data as { entityType?: string; entityId?: string });
     });
     return () => sub.remove();
   }, []);
@@ -311,7 +326,9 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   // tener una notificación real en la bandeja: setBadgeCountAsync lo fija
   // directamente sobre el ícono en los launchers que lo soportan.
   useEffect(() => {
-    Notifications.setBadgeCountAsync(unread).catch(() => {});
+    // Web: el contador va en el título de la pestaña ("(3) Shotra")
+    if (IS_WEB) setTitleBadge(unread);
+    else Notifications.setBadgeCountAsync(unread).catch(() => {});
   }, [unread]);
 
   // Polling mientras hay sesion
@@ -337,9 +354,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     const b = banner;
     markRead(b.id);
     setBanner(null);
-    if (b.entityType === 'chat' && b.entityId) openRoute(`/chat/${b.entityId}`);
-    else if (b.entityType === 'contract' && b.entityId) openRoute(`/contract/${b.entityId}`);
-    else if (b.entityType === 'request' && b.entityId) openRoute(`/request/${b.entityId}`);
+    openEntity(b);
   };
 
   return (
