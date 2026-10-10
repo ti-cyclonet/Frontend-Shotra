@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import { router } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
+import { LEGAL_VERSIONS } from '../legal/shotra-legal';
 
 const TOKEN_KEY = 'shotra_auth_token';
 const AUTHORIZA_URL = process.env.EXPO_PUBLIC_AUTHORIZA_URL || 'http://localhost:3000/api';
@@ -44,11 +45,21 @@ export interface RegisterData {
   habeasDataVersion: string;
 }
 
+/**
+ * Error del login cuando correo y contraseña son correctos pero la cuenta
+ * CycloNet aún no tiene Shotra (usa otra app del ecosistema): el login ofrece
+ * activarlo. Se identifica por `code` (no por clase: con Babel, extender Error
+ * puede romper instanceof).
+ */
+export const NO_SHOTRA_PLAN = 'NO_SHOTRA_PLAN';
+
 interface AuthContextValue {
   isAuthenticated: boolean;
   loading: boolean;
   user: any;
   login: (email: string, password: string) => Promise<void>;
+  /** Activa Shotra en una cuenta CycloNet existente (acepta términos + datos). */
+  activateShotra: (email: string, password: string) => Promise<string>;
   register: (data: RegisterData) => Promise<{ message: string; verificationRequired?: boolean }>;
   logout: () => Promise<void>;
 }
@@ -86,8 +97,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!res.ok) {
       const error = await res.json().catch(() => ({}));
+      // Authoriza solo responde UNAUTHORIZED después de validar la contraseña:
+      // la cuenta existe y es de esta persona, pero no tiene Shotra todavía.
       if (res.status === 401 && error.message === 'UNAUTHORIZED') {
-        throw new Error('No tienes un plan de SHOTRA activo. Registrate para obtener acceso.');
+        throw Object.assign(new Error('Tu cuenta CycloNet aún no tiene Shotra activo.'), { code: NO_SHOTRA_PLAN });
       }
       throw new Error(error.message || 'Credenciales incorrectas');
     }
@@ -106,6 +119,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await storage.setItem(TOKEN_KEY, token);
     const profileData = profileRes.ok ? await profileRes.json() : null;
     setUser({ token, profile: profileData, ...data.user });
+  }
+
+  async function activateShotra(email: string, password: string) {
+    const res = await fetch(`${AUTHORIZA_URL}/auth/activate-shotra`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email,
+        password,
+        acceptTerms: true,
+        acceptHabeasData: true,
+        termsVersion: LEGAL_VERSIONS.terms,
+        habeasDataVersion: LEGAL_VERSIONS.habeasData,
+      }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const msg = typeof body.message === 'string' ? body.message : body.message?.message;
+      throw new Error(msg || 'No se pudo activar Shotra en tu cuenta');
+    }
+    return String(body.message || 'Se activó Shotra en tu cuenta CycloNet.');
   }
 
   async function register(data: RegisterData) {
@@ -157,7 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated: !!user, loading, user, login, register, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated: !!user, loading, user, login, activateShotra, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

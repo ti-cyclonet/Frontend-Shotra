@@ -5,7 +5,7 @@ import {
 import { useState, useRef, useEffect } from 'react';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../src/context/AuthContext';
+import { useAuth, NO_SHOTRA_PLAN } from '../../src/context/AuthContext';
 import { takeReturnTo } from '../../src/navigation/returnTo';
 import { openRoute } from '../../src/web/nav';
 import { useTheme, THEMES, ThemeKey } from '../../src/context/ThemeProvider';
@@ -14,7 +14,7 @@ const THEME_ORDER: ThemeKey[] = ['graphite', 'black', 'crimson'];
 const useNative = Platform.OS !== 'web';
 
 export default function LoginScreen() {
-  const { login } = useAuth();
+  const { login, activateShotra } = useAuth();
   const { theme, themeKey, setTheme } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,6 +22,11 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
   const [focusField, setFocusField] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  // Cuenta CycloNet existente sin Shotra: se ofrece activarlo aquí mismo
+  const [needsActivation, setNeedsActivation] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptHabeasData, setAcceptHabeasData] = useState(false);
+  const [activating, setActivating] = useState(false);
 
   // Animaciones de entrada
   const logoAnim = useRef(new Animated.Value(0)).current;
@@ -50,6 +55,16 @@ export default function LoginScreen() {
     ]).start();
   };
 
+  /** Entra y abre el feed (o el enlace directo con el que llegó). */
+  const enter = async () => {
+    await login(email, password);
+    router.replace('/(tabs)/feed');
+    // Si llegó por un enlace directo, se abre al entrar (en web ancha, en el
+    // panel de detalle; en el celular, encima del feed para poder volver).
+    const back = takeReturnTo();
+    if (back) setTimeout(() => openRoute(back), 60);
+  };
+
   const handleLogin = async () => {
     if (!email || !password) {
       setError('Ingresa correo y contrasena');
@@ -59,18 +74,44 @@ export default function LoginScreen() {
     setLoading(true);
     setError('');
     try {
-      await login(email, password);
-      router.replace('/(tabs)/feed');
-      // Si llegó por un enlace directo, se abre al entrar (en web ancha, en el
-      // panel de detalle; en el celular, encima del feed para poder volver).
-      const back = takeReturnTo();
-      if (back) setTimeout(() => openRoute(back), 60);
+      await enter();
     } catch (err: any) {
-      setError(err.message || 'Error al iniciar sesion');
-      triggerShake();
+      if (err?.code === NO_SHOTRA_PLAN) {
+        setNeedsActivation(true);
+      } else {
+        setError(err.message || 'Error al iniciar sesion');
+        triggerShake();
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleActivate = async () => {
+    if (!acceptTerms || !acceptHabeasData) {
+      setError('Acepta los Términos de SHOTRA y la autorización de datos para continuar');
+      triggerShake();
+      return;
+    }
+    setActivating(true);
+    setError('');
+    try {
+      await activateShotra(email, password);
+      await enter();
+    } catch (err: any) {
+      setError(err.message || 'No se pudo activar Shotra');
+      triggerShake();
+    } finally {
+      setActivating(false);
+    }
+  };
+
+  /** Cambiar el correo o la contraseña cancela la activación pendiente. */
+  const resetActivation = () => {
+    if (!needsActivation) return;
+    setNeedsActivation(false);
+    setAcceptTerms(false);
+    setAcceptHabeasData(false);
   };
 
   const pressIn = () => Animated.spring(btnScale, { toValue: 0.96, useNativeDriver: useNative }).start();
@@ -141,7 +182,7 @@ export default function LoginScreen() {
               placeholder="Correo electronico"
               placeholderTextColor={theme.inputPlaceholder}
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(v) => { setEmail(v); resetActivation(); }}
               onFocus={() => setFocusField('email')}
               onBlur={() => setFocusField(null)}
               keyboardType="email-address"
@@ -165,7 +206,7 @@ export default function LoginScreen() {
               placeholder="Contrasena"
               placeholderTextColor={theme.inputPlaceholder}
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(v) => { setPassword(v); resetActivation(); }}
               onFocus={() => setFocusField('pass')}
               onBlur={() => setFocusField(null)}
               secureTextEntry={!showPassword}
@@ -192,20 +233,47 @@ export default function LoginScreen() {
             </View>
           ) : null}
 
+          {/* Cuenta CycloNet sin Shotra: activar aquí, sin volver a registrarse */}
+          {needsActivation && (
+            <View style={[styles.activateCard, { backgroundColor: theme.glass, borderColor: theme.border }]}>
+              <View style={styles.activateHead}>
+                <Ionicons name="sparkles-outline" size={20} color={theme.accent} />
+                <Text style={[styles.activateTitle, { color: theme.text }]}>Activa Shotra en tu cuenta</Text>
+              </View>
+              <Text style={[styles.activateText, { color: theme.textMuted }]}>
+                Ya tienes una cuenta CycloNet. Para usar Shotra con el plan gratuito, acepta sus términos:
+              </Text>
+              <Pressable style={styles.consentRow} onPress={() => setAcceptTerms(!acceptTerms)} accessibilityRole="checkbox" accessibilityState={{ checked: acceptTerms }}>
+                <Ionicons name={acceptTerms ? 'checkbox' : 'square-outline'} size={22} color={acceptTerms ? theme.accent : theme.textMuted} />
+                <Text style={[styles.consentText, { color: theme.textMuted }]}>
+                  Acepto los{' '}
+                  <Text style={{ color: theme.accent, fontWeight: '700' }} onPress={() => router.push({ pathname: '/(auth)/legal', params: { doc: 'terms' } })}>Términos y Condiciones de SHOTRA</Text>.
+                </Text>
+              </Pressable>
+              <Pressable style={styles.consentRow} onPress={() => setAcceptHabeasData(!acceptHabeasData)} accessibilityRole="checkbox" accessibilityState={{ checked: acceptHabeasData }}>
+                <Ionicons name={acceptHabeasData ? 'checkbox' : 'square-outline'} size={22} color={acceptHabeasData ? theme.accent : theme.textMuted} />
+                <Text style={[styles.consentText, { color: theme.textMuted }]}>
+                  Autorizo el{' '}
+                  <Text style={{ color: theme.accent, fontWeight: '700' }} onPress={() => router.push({ pathname: '/(auth)/legal', params: { doc: 'habeasData' } })}>tratamiento de mis datos personales</Text>.
+                </Text>
+              </Pressable>
+            </View>
+          )}
+
           <Animated.View style={{ transform: [{ scale: btnScale }] }}>
             <Pressable
-              style={[styles.button, { backgroundColor: brand.accent }]}
-              onPress={handleLogin}
+              style={[styles.button, { backgroundColor: brand.accent }, needsActivation && !(acceptTerms && acceptHabeasData) && { opacity: 0.55 }]}
+              onPress={needsActivation ? handleActivate : handleLogin}
               onPressIn={pressIn}
               onPressOut={pressOut}
-              disabled={loading}
+              disabled={loading || activating}
             >
-              {loading ? (
+              {loading || activating ? (
                 <ActivityIndicator color={brand.accentText} />
               ) : (
                 <>
-                  <Ionicons name="log-in-outline" size={20} color={brand.accentText} />
-                  <Text style={[styles.buttonText, { color: brand.accentText }]}>Iniciar Sesion</Text>
+                  <Ionicons name={needsActivation ? 'checkmark-circle-outline' : 'log-in-outline'} size={20} color={brand.accentText} />
+                  <Text style={[styles.buttonText, { color: brand.accentText }]}>{needsActivation ? 'Activar Shotra y entrar' : 'Iniciar Sesion'}</Text>
                 </>
               )}
             </Pressable>
@@ -352,5 +420,11 @@ const styles = StyleSheet.create({
   swatchLabel: { fontSize: 12 },
   footer: { fontSize: 11, marginTop: 40 },
   registerLink: { alignItems: 'center', marginTop: 18 },
+  activateCard: { borderWidth: 1, borderRadius: 14, padding: 14, marginBottom: 12, gap: 8 },
+  activateHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  activateTitle: { fontSize: 15, fontWeight: '800' },
+  activateText: { fontSize: 13, lineHeight: 18 },
+  consentRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  consentText: { flex: 1, fontSize: 13, lineHeight: 19 },
   registerText: { fontSize: 14 },
 });
