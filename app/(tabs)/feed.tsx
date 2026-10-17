@@ -139,8 +139,9 @@ export default function FeedScreen() {
 
   const formatBudget = (min?: number, max?: number) => {
     if (!min && !max) return 'A convenir';
-    if (min && max) return `$${min.toLocaleString()} - $${max.toLocaleString()}`;
-    return `$${(min || max)?.toLocaleString()}`;
+    if (min && max) return min === max ? `$${min.toLocaleString()}` : `$${min.toLocaleString()} - $${max.toLocaleString()}`;
+    // Solo mínimo (p. ej. domicilios de InOut: lo que pagó el cliente): se puede ofertar más
+    return min ? `Desde $${min.toLocaleString()}` : `Hasta $${max!.toLocaleString()}`;
   };
 
   const renderItem = ({ item, index }: { item: ServiceRequest; index: number }) => (
