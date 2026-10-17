@@ -181,8 +181,12 @@ export default function RequestDetailScreen() {
             <Ionicons name="cash" size={16} color={theme.accent} />
             <Text style={[styles.budgetText, { color: theme.accent }]}>
               {request.budgetMin && request.budgetMax
-                ? `$${request.budgetMin.toLocaleString()} - $${request.budgetMax.toLocaleString()}`
-                : `$${(request.budgetMin || request.budgetMax)?.toLocaleString()}`
+                ? request.budgetMin === request.budgetMax
+                  ? `$${request.budgetMin.toLocaleString()}`
+                  : `$${request.budgetMin.toLocaleString()} - $${request.budgetMax.toLocaleString()}`
+                : request.budgetMin
+                  ? `Desde $${request.budgetMin.toLocaleString()}`
+                  : `Hasta $${request.budgetMax!.toLocaleString()}`
               } COP
             </Text>
           </View>
