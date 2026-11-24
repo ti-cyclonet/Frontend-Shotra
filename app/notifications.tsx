@@ -16,6 +16,7 @@ const ICON_BY_TYPE: Record<string, any> = {
   NEW_RATING: 'star',
   RATING_REVEALED: 'star-half',
   NEW_MESSAGE: 'chatbubble-ellipses',
+  ROUTE_MATCH: 'navigate',
 };
 
 function timeAgo(iso: string) {
@@ -43,6 +44,7 @@ export default function NotificationsScreen() {
     if (n.entityType === 'chat' && n.entityId) nav.open(`/chat/${n.entityId}`);
     else if (n.entityType === 'contract' && n.entityId) nav.open(`/contract/${n.entityId}`);
     else if (n.entityType === 'request' && n.entityId) nav.open(`/request/${n.entityId}`);
+    else if (n.entityType === 'route' && n.entityId) nav.open(`/routes/${n.entityId}`);
   };
 
   const handleClearAll = async () => {

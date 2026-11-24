@@ -1,9 +1,9 @@
 import { createElement, useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useTheme } from '../context/ThemeProvider';
-import { RoutePoint, buildRouteMapHtml } from './routeMapHtml';
+import { RoutePoint, MapStop, buildRouteMapHtml } from './routeMapHtml';
 
-export type { RoutePoint };
+export type { RoutePoint, MapStop };
 
 interface RouteMapViewProps {
   /** Punto de recogida (opcional: si falta, solo se muestra el destino). */
@@ -11,6 +11,10 @@ interface RouteMapViewProps {
   /** Punto de entrega/ejecución. */
   destination?: RoutePoint | null;
   height?: number;
+  /** Trazado ya calculado ([lng, lat]); sin él se pide a OSRM entre origen y destino. */
+  geometry?: [number, number][] | null;
+  /** Recogidas/entregas de pedidos sobre la ruta. */
+  stops?: MapStop[];
 }
 
 /**
@@ -24,11 +28,12 @@ interface RouteMapViewProps {
  * No es una página aparte (/route-map.html): la regla SPA de Amplify la
  * reescribía a la app ("Unmatched Route"). Los .js/.css nunca se reescriben.
  */
-export function RouteMapView({ origin, destination, height = 220 }: RouteMapViewProps) {
+export function RouteMapView({ origin, destination, height = 220, geometry, stops }: RouteMapViewProps) {
   const { theme } = useTheme();
   const html = useMemo(
-    () => buildRouteMapHtml(origin, destination, `${window.location.origin}/vendor/leaflet`),
-    [origin?.lat, origin?.lng, destination?.lat, destination?.lng],
+    () => buildRouteMapHtml(origin, destination, `${window.location.origin}/vendor/leaflet`, { geometry, stops }),
+    // geometry/stops por valor: llegan como arreglos nuevos en cada render
+    [origin?.lat, origin?.lng, destination?.lat, destination?.lng, JSON.stringify(geometry ?? null), JSON.stringify(stops ?? null)],
   );
 
   if (!origin && !destination) return null;

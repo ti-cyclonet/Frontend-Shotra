@@ -6,17 +6,19 @@ import { confirmDialog, alertDialog } from '../../src/services/dialog';
 import { useGlass } from '../../src/context/ThemeProvider';
 import { RouteMapView } from '../../src/components/RouteMapView';
 import { ReputationLine } from '../../src/components/Reputation';
+import { packageLabel } from '../../src/services/routes';
 import { spacing } from '../../src/components/ui';
 import { useNav, useRouteParams, headerTop } from '../../src/web/nav';
 
 export default function RequestDetailScreen() {
   const nav = useNav();
-  const { id } = useRouteParams<{ id: string }>();
+  // routeId: se llega desde "Mi ruta" para ofertar En ruta
+  const { id, routeId } = useRouteParams<{ id: string; routeId: string }>();
   const glass = useGlass();
   const theme = glass.theme;
   const [request, setRequest] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [showProposalForm, setShowProposalForm] = useState(false);
+  const [showProposalForm, setShowProposalForm] = useState(!!routeId);
   const [price, setPrice] = useState('');
   const [description, setDescription] = useState('');
   const [estimatedTime, setEstimatedTime] = useState('');
@@ -122,6 +124,7 @@ export default function RequestDetailScreen() {
         description,
         estimatedTime: estimatedTime || undefined,
         imageIds: selectedImageIds.length > 0 ? selectedImageIds : undefined,
+        routeId: routeId || undefined,
       });
       alertDialog('Propuesta enviada', 'El solicitante revisara tu propuesta y te notificara.');
       setShowProposalForm(false);
@@ -173,6 +176,13 @@ export default function RequestDetailScreen() {
           <View style={styles.infoRow}>
             <Ionicons name="location" size={16} color={theme.textMuted} />
             <Text style={[styles.infoText, { color: theme.textMuted }]}>{request.address}</Text>
+          </View>
+        )}
+
+        {request.packageSize && (
+          <View style={styles.infoRow}>
+            <Ionicons name="cube" size={16} color={theme.textMuted} />
+            <Text style={[styles.infoText, { color: theme.textMuted }]}>Paquete {packageLabel(request.packageSize).toLowerCase()}</Text>
           </View>
         )}
 
@@ -297,6 +307,13 @@ export default function RequestDetailScreen() {
               </View>
               <Text style={[styles.proposalDesc, { color: theme.textMuted }]}>{p.description}</Text>
               {p.estimatedTime && <Text style={[styles.proposalTime, { color: theme.textMuted }]}>Tiempo: {p.estimatedTime}</Text>}
+              {/* Oferta "En ruta": el ofertante ya pasa por aquí (el solicitante no ve su ruta) */}
+              {p.viaRoute && (
+                <View style={styles.viaRouteTag}>
+                  <Ionicons name="navigate" size={12} color="#fff" />
+                  <Text style={styles.recommendedText}>En ruta: ya pasa por tu zona</Text>
+                </View>
+              )}
               {p.recommended && (
                 <View style={styles.recommendedTag}>
                   <Ionicons name="sparkles" size={12} color="#fff" />
@@ -373,6 +390,12 @@ export default function RequestDetailScreen() {
       {showProposalForm && (
         <View style={[styles.formSection, glass.card, { borderColor: theme.accent }]}>
           <Text style={[styles.formTitle, { color: theme.text }]}>Tu propuesta</Text>
+          {routeId && (
+            <View style={[styles.viaRouteTag, { alignSelf: 'flex-start', marginBottom: spacing[3] }]}>
+              <Ionicons name="navigate" size={12} color="#fff" />
+              <Text style={styles.recommendedText}>Desde tu ruta: este pedido queda en tu camino</Text>
+            </View>
+          )}
 
           <Text style={[styles.label, { color: theme.textMuted }]}>Precio (COP) *</Text>
           <TextInput
@@ -489,6 +512,7 @@ const styles = StyleSheet.create({
   providerRating: { color: '#f39c12', fontSize: 12, marginTop: 4 },
   recommendedTag: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 4, backgroundColor: '#16a34a', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3, marginTop: 8 },
   recommendedText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  viaRouteTag: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 4, backgroundColor: '#2563eb', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3, marginTop: 8 },
   viewProfileBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: 8, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1 },
   viewProfileBtnText: { fontSize: 12, fontWeight: '700' },
   offerImagesRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
