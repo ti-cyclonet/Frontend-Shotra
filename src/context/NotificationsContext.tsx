@@ -12,11 +12,13 @@ import { setTitleBadge, showBrowserNotification } from '../web/browserNotify';
 
 const IS_WEB = Platform.OS === 'web';
 
-/** Destino de una notificación (chat, contrato o solicitud). */
+/** Destino de una notificación (chat, contrato, solicitud o ruta). */
 function openEntity(n: { entityType?: string; entityId?: string }): void {
   if (n.entityType === 'chat' && n.entityId) openRoute(`/chat/${n.entityId}`);
   else if (n.entityType === 'contract' && n.entityId) openRoute(`/contract/${n.entityId}`);
   else if (n.entityType === 'request' && n.entityId) openRoute(`/request/${n.entityId}`);
+  // Pedido en ruta (ROUTE_MATCH): abre la ruta con sus pedidos sugeridos
+  else if (n.entityType === 'route' && n.entityId) openRoute(`/routes/${n.entityId}`);
 }
 
 interface NotificationItem {

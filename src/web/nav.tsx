@@ -32,10 +32,13 @@ const DETAIL_PATTERNS = [
   /^\/account-statement$/,
   /^\/edit-profile$/,
   /^\/portfolio-settings$/,
+  /^\/routes$/,
+  /^\/routes\/[^/]+$/,
 ];
 
 export function isDetailPath(path: string): boolean {
-  return DETAIL_PATTERNS.some((re) => re.test(path));
+  const base = path.split('?')[0];
+  return DETAIL_PATTERNS.some((re) => re.test(base));
 }
 
 // ─── Pila del panel de detalle ─────────────────────────────────────────────
