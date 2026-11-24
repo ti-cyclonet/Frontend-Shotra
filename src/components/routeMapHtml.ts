@@ -8,6 +8,17 @@ export interface RoutePoint {
   lng: number;
 }
 
+/** Punto extra sobre el mapa (recogida o entrega de un pedido en ruta). */
+export interface MapStop extends RoutePoint {
+  kind: 'pickup' | 'dropoff';
+}
+
+export interface RouteMapExtras {
+  /** Trazado ya calculado ([lng, lat], GeoJSON): se dibuja tal cual, sin pedirlo a OSRM. */
+  geometry?: [number, number][] | null;
+  stops?: MapStop[];
+}
+
 /** Solo coordenadas numéricas válidas entran al script del mapa. */
 function clean(p: RoutePoint | null | undefined): RoutePoint | null {
   if (!p) return null;
@@ -23,6 +34,7 @@ export function buildRouteMapHtml(
   rawOrigin: RoutePoint | null | undefined,
   rawDestination: RoutePoint | null | undefined,
   leafletBase: string = LEAFLET_CDN,
+  extras: RouteMapExtras = {},
 ): string {
   const origin = clean(rawOrigin);
   const destination = clean(rawDestination);
@@ -38,8 +50,28 @@ export function buildRouteMapHtml(
     ? `L.marker([${destination.lat}, ${destination.lng}], { icon: destIcon }).addTo(map);`
     : '';
 
-  const routeScript =
-    origin && destination
+  // Trazado guardado y paradas: solo números finitos entran al script
+  const line = (extras.geometry || [])
+    .map(([lng, lat]) => [Number(lat), Number(lng)])
+    .filter(([lat, lng]) => Number.isFinite(lat) && Number.isFinite(lng));
+  const stopsScript = (extras.stops || [])
+    .map((s) => ({ p: clean(s), color: s.kind === 'dropoff' ? '#16a34a' : '#2563eb' }))
+    .filter((s) => s.p)
+    .map(
+      ({ p, color }) =>
+        `L.circleMarker([${p!.lat}, ${p!.lng}], { radius: 7, weight: 2, color: '#ffffff', fillColor: '${color}', fillOpacity: 1 }).addTo(map); bounds.push([${p!.lat}, ${p!.lng}]);`,
+    )
+    .join('\n');
+
+  const routeScript = line.length > 1
+    ? `
+        var line = ${JSON.stringify(line)};
+        L.polyline(line, { color: '#dc2626', weight: 4, opacity: 0.85 }).addTo(map);
+        var bounds = line.slice();
+        ${stopsScript}
+        map.fitBounds(bounds, { padding: [30, 30] });
+      `
+    : origin && destination
       ? `
         var pts = [[${origin.lat}, ${origin.lng}], [${destination.lat}, ${destination.lng}]];
         map.fitBounds(pts, { padding: [30, 30] });

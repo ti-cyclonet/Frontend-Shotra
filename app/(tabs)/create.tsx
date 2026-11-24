@@ -9,6 +9,7 @@ import { useTheme } from '../../src/context/ThemeProvider';
 import { Text, Card, PressableCard, Button, Input, IconChip, SectionLabel, spacing, radius, typography } from '../../src/components/ui';
 import { RouteMapView, RoutePoint } from '../../src/components/RouteMapView';
 import { headerTop } from '../../src/web/nav';
+import { routesApi, PACKAGE_OPTIONS, PackageSize } from '../../src/services/routes';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
@@ -56,6 +57,9 @@ export default function CreateRequestScreen() {
   const geocodeTimer = useRef<any>(null);
   const [originCoords, setOriginCoords] = useState<RoutePoint | null>(null);
   const [gettingLocation, setGettingLocation] = useState(false);
+  const [packageSize, setPackageSize] = useState<PackageSize>('SMALL');
+  // Domiciliarios con una ruta publicada que pasa por la recogida y la entrega
+  const [routeCoverage, setRouteCoverage] = useState(0);
 
   useEffect(() => {
     api.get('/categories/leaves').then(setCategories).catch(() => {});
@@ -83,6 +87,25 @@ export default function CreateRequestScreen() {
 
   const requiresRoute = !!selected?.requiresRoute;
 
+  useEffect(() => {
+    if (!requiresRoute || !originCoords || !destCoords) {
+      setRouteCoverage(0);
+      return;
+    }
+    let cancelled = false;
+    const t = setTimeout(() => {
+      routesApi
+        .coverage({
+          pickLat: originCoords.lat, pickLng: originCoords.lng,
+          dropLat: destCoords.lat, dropLng: destCoords.lng,
+          categoryId: selectedCategory, urgent: isUrgent, packageSize,
+        })
+        .then((r) => !cancelled && setRouteCoverage(r.count))
+        .catch(() => !cancelled && setRouteCoverage(0));
+    }, 600);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [requiresRoute, originCoords, destCoords, selectedCategory, isUrgent, packageSize]);
+
   const handleSubmit = async () => {
     if (!title || !description || !selectedCategory) {
       alertDialog('Campos requeridos', 'Completa titulo, descripcion y categoria');
@@ -102,7 +125,7 @@ export default function CreateRequestScreen() {
         budgetMax: budgetMax ? parseFloat(budgetMax) : undefined,
         isUrgent,
         ...(requiresRoute && destCoords
-          ? { address: destAddress.trim(), latitude: destCoords.lat, longitude: destCoords.lng }
+          ? { address: destAddress.trim(), latitude: destCoords.lat, longitude: destCoords.lng, packageSize }
           : {}),
         ...(requiresRoute && originCoords
           ? {
@@ -116,6 +139,7 @@ export default function CreateRequestScreen() {
       setTitle(''); setDescription(''); setBudgetMin(''); setBudgetMax('');
       setSelectedCategory(''); setIsUrgent(false);
       setDestAddress(''); setDestCoords(null); setOriginCoords(null); setGeocodeFailed(false);
+      setPackageSize('SMALL');
       router.push('/(tabs)/my-requests');
     } catch (err: any) {
       alertDialog('Error', err.message || 'No se pudo publicar la solicitud');
@@ -253,6 +277,34 @@ export default function CreateRequestScreen() {
               <RouteMapView origin={originCoords} destination={destCoords} />
             </View>
           )}
+
+          <SectionLabel>Tamaño del paquete</SectionLabel>
+          <View style={styles.sizeRow}>
+            {PACKAGE_OPTIONS.map((o) => {
+              const sel = packageSize === o.value;
+              return (
+                <TouchableOpacity
+                  key={o.value}
+                  onPress={() => setPackageSize(o.value)}
+                  style={[styles.sizeChip, { borderColor: sel ? theme.accent : theme.glassBorder, backgroundColor: sel ? theme.accentSoft : theme.glass }]}
+                >
+                  <Text variant="bodyStrong" color={sel ? theme.accent : theme.text}>{o.label}</Text>
+                  <Text variant="micro" muted>{o.hint}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {routeCoverage > 0 && (
+            <View style={[styles.geoStatus, { marginTop: spacing[3] }]}>
+              <Ionicons name="navigate" size={16} color={theme.success} />
+              <Text variant="caption" style={{ color: theme.success, flex: 1 }}>
+                {routeCoverage === 1
+                  ? '1 domiciliario ya pasa por aquí y podría llevarlo.'
+                  : `${routeCoverage} domiciliarios ya pasan por aquí y podrían llevarlo.`}
+              </Text>
+            </View>
+          )}
         </>
       )}
 
@@ -359,6 +411,8 @@ const styles = StyleSheet.create({
   half: { flex: 1 },
   geoStatus: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], marginTop: spacing[2] },
   selector: { flexDirection: 'row', alignItems: 'center', gap: spacing[3] },
+  sizeRow: { flexDirection: 'row', gap: spacing[2] },
+  sizeChip: { flex: 1, borderWidth: 1, borderRadius: radius.lg, paddingHorizontal: spacing[3], paddingVertical: spacing[2] },
   urgentToggle: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], marginTop: spacing[5] },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   modalSheet: { borderTopLeftRadius: radius['2xl'], borderTopRightRadius: radius['2xl'], padding: spacing[5], maxHeight: '82%' },

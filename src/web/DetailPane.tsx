@@ -14,6 +14,9 @@ import NotificationsScreen from '../../app/notifications';
 import AccountStatementScreen from '../../app/account-statement';
 import EditProfileScreen from '../../app/edit-profile';
 import PortfolioSettingsScreen from '../../app/portfolio-settings';
+import MyRoutesScreen from '../../app/routes';
+import NewRouteScreen from '../../app/routes/new';
+import RouteDetailScreen from '../../app/routes/[id]';
 
 /** Qué pantalla mostrar en el panel para cada ruta, y cómo sacar sus parámetros. */
 const ROUTES: { re: RegExp; param?: string; Screen: ComponentType; fullWidth?: boolean }[] = [
@@ -26,6 +29,10 @@ const ROUTES: { re: RegExp; param?: string; Screen: ComponentType; fullWidth?: b
   { re: /^\/account-statement$/, Screen: AccountStatementScreen },
   { re: /^\/edit-profile$/, Screen: EditProfileScreen },
   { re: /^\/portfolio-settings$/, Screen: PortfolioSettingsScreen },
+  { re: /^\/routes$/, Screen: MyRoutesScreen },
+  // Antes que /routes/:id: "new" no es un id
+  { re: /^\/routes\/new$/, Screen: NewRouteScreen },
+  { re: /^\/routes\/([^/]+)$/, param: 'id', Screen: RouteDetailScreen },
 ];
 
 /** Panel derecho de la web ancha: el detalle abierto o la portada de Shotra. */
@@ -43,10 +50,17 @@ export function DetailPane() {
     return () => document.removeEventListener('keydown', onKey);
   }, []);
 
+  // La query (?routeId=…) va como parámetros extra de la pantalla
+  const [base, query] = (path || '').split('?');
   for (const r of path ? ROUTES : []) {
-    const m = path!.match(r.re);
+    const m = base.match(r.re);
     if (!m) continue;
-    const params = r.param ? { [r.param]: decodeURIComponent(m[1]) } : {};
+    const params: Record<string, string> = {};
+    for (const pair of (query || '').split('&')) {
+      const [k, v = ''] = pair.split('=');
+      if (k) params[decodeURIComponent(k)] = decodeURIComponent(v);
+    }
+    if (r.param) params[r.param] = decodeURIComponent(m[1]);
     return (
       <View style={[styles.pane, { backgroundColor: theme.background }]}>
         {/* key: al cambiar de ruta la pantalla se monta de nuevo con su estado limpio */}

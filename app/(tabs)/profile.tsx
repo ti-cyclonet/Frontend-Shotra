@@ -250,6 +250,17 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
           </PressableCard>
         )}
+        {/* Pedidos en ruta: solo quien ofrece domicilios (categoría con trayecto) */}
+        {profile?.isProvider && profile?.skills?.some((s: any) => s.category?.requiresRoute) && (
+          <PressableCard padding={14} rounded={radius.xl} onPress={() => openRoute('/routes')} style={[styles.navRow, { marginTop: spacing[2] }]}>
+            <IconChip icon="navigate-outline" color="blue" />
+            <View style={{ flex: 1 }}>
+              <Text variant="bodyStrong">Mis rutas</Text>
+              <Text variant="caption" muted>Publica un trayecto y lleva pedidos que quedan en tu camino</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
+          </PressableCard>
+        )}
       </Animated.View>
 
       {!profile?.isProvider && (
